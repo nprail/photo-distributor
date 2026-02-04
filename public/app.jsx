@@ -262,52 +262,6 @@ function StatsCard({ title, value, icon: Icon, trend }) {
   )
 }
 
-// Google Auth Card
-function GoogleAuthCard({ service, status, onConnect }) {
-  const serviceName = service === 'drive' ? 'Google Drive' : 'Google Photos'
-  const isAuthenticated = status?.authenticated
-  const hasCredentials = status?.hasCredentials
-
-  return (
-    <Card className="flex items-center justify-between">
-      <div className="flex items-center gap-4">
-        <div className="p-3 bg-gray-700/50 rounded-lg">
-          <Icons.Google />
-        </div>
-        <div>
-          <h3 className="font-semibold">{serviceName}</h3>
-          <p className="text-sm text-gray-400">
-            {isAuthenticated
-              ? 'Connected and ready'
-              : hasCredentials
-                ? 'Credentials found, needs authentication'
-                : 'No credentials file found'}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center gap-3">
-        <StatusBadge
-          status={
-            isAuthenticated
-              ? 'authenticated'
-              : hasCredentials
-                ? 'pending'
-                : 'disabled'
-          }
-        />
-        {hasCredentials && !isAuthenticated && (
-          <button
-            onClick={() => onConnect(service)}
-            className="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg text-sm font-medium transition-colors"
-          >
-            Connect
-          </button>
-        )}
-      </div>
-    </Card>
-  )
-}
-
 // Destination Card
 function DestinationCard({
   name,
@@ -442,25 +396,39 @@ function ReceivedFileEntry({ file, expanded, onToggle }) {
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 9l-7 7-7-7"
+            />
           </svg>
         </div>
       </div>
 
       {expanded && hasDestinations && (
         <div className="border-t border-gray-600/50 p-4 bg-gray-800/30 space-y-2">
-          <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Destinations</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">
+            Destinations
+          </p>
           {destinations.map((dest, i) => (
-            <div key={i} className="flex items-center justify-between p-2 bg-gray-700/30 rounded">
+            <div
+              key={i}
+              className="flex items-center justify-between p-2 bg-gray-700/30 rounded"
+            >
               <div className="flex items-center gap-2">
-                <div className={`p-1 rounded ${dest.success ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                <div
+                  className={`p-1 rounded ${dest.success ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}
+                >
                   {dest.success ? <Icons.Check /> : <Icons.X />}
                 </div>
                 <span className="text-sm">{dest.destination}</span>
               </div>
               <div className="text-right text-xs text-gray-500">
                 {dest.duration && <span>{dest.duration}ms</span>}
-                {dest.error && <span className="text-red-400 ml-2">{dest.error}</span>}
+                {dest.error && (
+                  <span className="text-red-400 ml-2">{dest.error}</span>
+                )}
               </div>
             </div>
           ))}
@@ -473,7 +441,7 @@ function ReceivedFileEntry({ file, expanded, onToggle }) {
 // Active Upload Indicator
 function ActiveUploadIndicator({ uploads }) {
   const allUploads = Object.entries(uploads).flatMap(([dest, files]) =>
-    files.map((f) => ({ ...f, destination: dest }))
+    files.map((f) => ({ ...f, destination: dest })),
   )
 
   if (allUploads.length === 0) return null
@@ -483,12 +451,16 @@ function ActiveUploadIndicator({ uploads }) {
       <div className="flex items-center gap-2 mb-2">
         <div className="animate-spin h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
         <span className="text-sm text-blue-400 font-medium">
-          {allUploads.length} upload{allUploads.length !== 1 ? 's' : ''} in progress
+          {allUploads.length} upload{allUploads.length !== 1 ? 's' : ''} in
+          progress
         </span>
       </div>
       <div className="space-y-1">
         {allUploads.map((upload) => (
-          <div key={upload.id} className="flex items-center justify-between text-xs">
+          <div
+            key={upload.id}
+            className="flex items-center justify-between text-xs"
+          >
             <span className="text-gray-300">{upload.filename}</span>
             <span className="text-gray-500">→ {upload.destination}</span>
           </div>
@@ -607,7 +579,22 @@ function App() {
       const res = await fetch(`/api/auth/google/${service}/start`)
       const data = await res.json()
       if (data.authUrl) {
-        window.open(data.authUrl, '_blank', 'width=600,height=700')
+        const popup = window.open(
+          data.authUrl,
+          '_blank',
+          'width=600,height=700',
+        )
+
+        // Poll for popup close and refetch settings/auth status
+        if (popup) {
+          const pollInterval = setInterval(() => {
+            if (popup.closed) {
+              clearInterval(pollInterval)
+              // Refetch settings and auth status after OAuth completes
+              fetchData(true)
+            }
+          }, 500)
+        }
       } else {
         alert(data.error || 'Failed to start authentication')
       }
@@ -627,11 +614,11 @@ function App() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to save settings')
-      
+
       if (data.destinations) {
         setDestinations(data.destinations)
       }
-      
+
       setSuccessMessage(data.message || 'Settings saved')
       setTimeout(() => setSuccessMessage(null), 3000)
       fetchData()
@@ -659,8 +646,8 @@ function App() {
   const tabs = [
     { id: 'status', label: 'Status' },
     { id: 'logs', label: 'Files' },
+    { id: 'destinations', label: 'Destinations' },
     { id: 'settings', label: 'Settings' },
-    { id: 'auth', label: 'Google Auth' },
   ]
 
   if (loading) {
@@ -720,9 +707,10 @@ function App() {
         {activeTab === 'status' && (
           <div className="space-y-8">
             {/* Active Uploads */}
-            {status?.activeUploads && Object.keys(status.activeUploads).length > 0 && (
-              <ActiveUploadIndicator uploads={status.activeUploads} />
-            )}
+            {status?.activeUploads &&
+              Object.keys(status.activeUploads).length > 0 && (
+                <ActiveUploadIndicator uploads={status.activeUploads} />
+              )}
 
             {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -788,7 +776,9 @@ function App() {
 
             {/* Recent Received Files */}
             <Card>
-              <h2 className="text-lg font-semibold mb-4">Recently Received Files</h2>
+              <h2 className="text-lg font-semibold mb-4">
+                Recently Received Files
+              </h2>
               <div className="space-y-3">
                 {receivedFiles.slice(0, 5).map((file) => (
                   <ReceivedFileEntry
@@ -818,9 +808,10 @@ function App() {
             </div>
 
             {/* Active Uploads */}
-            {status?.activeUploads && Object.keys(status.activeUploads).length > 0 && (
-              <ActiveUploadIndicator uploads={status.activeUploads} />
-            )}
+            {status?.activeUploads &&
+              Object.keys(status.activeUploads).length > 0 && (
+                <ActiveUploadIndicator uploads={status.activeUploads} />
+              )}
 
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
               {receivedFiles.map((file) => (
@@ -888,24 +879,6 @@ function App() {
               </p>
             </Card>
 
-            {/* Directories */}
-            <Card>
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Icons.Folder /> Directories
-              </h3>
-              <div className="space-y-4">
-                <Input
-                  label="Photos Directory"
-                  value={settings.directories?.photosDir || ''}
-                  onChange={(v) => updateSetting('directories.photosDir', v)}
-                  placeholder="/path/to/photos"
-                />
-                <p className="text-xs text-gray-500">
-                  Where organized photos are stored locally.
-                </p>
-              </div>
-            </Card>
-
             {/* Upload Behavior */}
             <Card>
               <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -925,63 +898,98 @@ function App() {
                 />
               </div>
             </Card>
+          </div>
+        )}
 
-            {/* Destinations */}
+        {activeTab === 'destinations' && settings && (
+          <div className="space-y-6">
+            {/* Save Button */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold">Upload Destinations</h2>
+                <p className="text-gray-400 text-sm">
+                  Configure where your photos are uploaded.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSaveSettings}
+                  disabled={saving}
+                  className="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  <Icons.Save />
+                  {saving ? 'Saving...' : 'Save Settings'}
+                </button>
+              </div>
+            </div>
+
+            {/* Local Destination */}
             <Card>
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <Icons.Cloud /> Upload Destinations
-                </h3>
-              </div>
-
-              {/* Local Destination */}
-              <div className="space-y-4">
-                <div className="p-4 bg-gray-700/30 rounded-lg space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-700/50 rounded-lg text-gray-400">
-                        <Icons.Folder />
-                      </div>
-                      <div>
-                        <p className="font-medium">Local Filesystem</p>
-                        <p className="text-sm text-gray-400">
-                          Save photos to local directory
-                        </p>
-                      </div>
-                    </div>
-                    <Toggle
-                      checked={settings.destinations?.local?.enabled ?? true}
-                      onChange={(v) =>
-                        updateSetting('destinations.local.enabled', v)
-                      }
-                    />
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gray-700/50 rounded-lg text-gray-400">
+                    <Icons.Folder />
                   </div>
-                  {settings.destinations?.local?.enabled && (
-                    <Input
-                      label="Photos Directory"
-                      value={settings.destinations?.local?.photosDir || ''}
-                      onChange={(v) =>
-                        updateSetting('destinations.local.photosDir', v)
-                      }
-                      placeholder="/path/to/photos"
-                    />
-                  )}
+                  <div>
+                    <h3 className="font-semibold">Local Filesystem</h3>
+                    <p className="text-sm text-gray-400">
+                      Save photos to local directory
+                    </p>
+                  </div>
                 </div>
+                <Toggle
+                  checked={settings.destinations?.local?.enabled ?? true}
+                  onChange={(v) =>
+                    updateSetting('destinations.local.enabled', v)
+                  }
+                />
+              </div>
+              {settings.destinations?.local?.enabled && (
+                <div className="pt-4 border-t border-gray-700/50">
+                  <Input
+                    label="Photos Directory"
+                    value={settings.destinations?.local?.photosDir || ''}
+                    onChange={(v) =>
+                      updateSetting('destinations.local.photosDir', v)
+                    }
+                    placeholder="/path/to/photos"
+                  />
+                </div>
+              )}
+            </Card>
 
-                {/* Google Drive Destination */}
-                <div className="p-4 bg-gray-700/30 rounded-lg space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-700/50 rounded-lg text-gray-400">
-                        <Icons.Cloud />
-                      </div>
-                      <div>
-                        <p className="font-medium">Google Drive</p>
-                        <p className="text-sm text-gray-400">
-                          Upload to Google Drive
-                        </p>
-                      </div>
-                    </div>
+            {/* Google Drive Destination */}
+            <Card>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gray-700/50 rounded-lg">
+                    <Icons.Google />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Google Drive</h3>
+                    <p className="text-sm text-gray-400">
+                      {authStatus?.drive?.authenticated
+                        ? 'Connected and ready'
+                        : authStatus?.drive?.hasCredentials
+                          ? 'Credentials found, needs authentication'
+                          : 'Upload to Google Drive'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {authStatus?.drive?.authenticated && (
+                    <StatusBadge status="authenticated" />
+                  )}
+                  {!authStatus?.drive?.authenticated &&
+                    authStatus?.drive?.hasCredentials && (
+                      <button
+                        onClick={() => handleGoogleConnect('drive')}
+                        className="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Connect
+                      </button>
+                    )}
+                  {authStatus?.drive?.authenticated && (
                     <Toggle
                       checked={
                         settings.destinations?.googleDrive?.enabled ?? false
@@ -990,43 +998,65 @@ function App() {
                         updateSetting('destinations.googleDrive.enabled', v)
                       }
                     />
-                  </div>
-                  {settings.destinations?.googleDrive?.enabled && (
-                    <div className="space-y-3">
-                      <Input
-                        label="Root Folder ID (optional)"
-                        value={
-                          settings.destinations?.googleDrive?.rootFolderId || ''
-                        }
-                        onChange={(v) =>
-                          updateSetting(
-                            'destinations.googleDrive.rootFolderId',
-                            v || null,
-                          )
-                        }
-                        placeholder="Leave empty to create 'Photos' folder"
-                      />
-                      <p className="text-xs text-gray-500">
-                        Go to Google Auth tab to connect your Google account.
-                      </p>
-                    </div>
                   )}
                 </div>
+              </div>
+              {settings.destinations?.googleDrive?.enabled && (
+                <div className="pt-4 border-t border-gray-700/50 space-y-4">
+                  <Input
+                    label="Root Folder ID (optional)"
+                    value={
+                      settings.destinations?.googleDrive?.rootFolderId || ''
+                    }
+                    onChange={(v) =>
+                      updateSetting(
+                        'destinations.googleDrive.rootFolderId',
+                        v || null,
+                      )
+                    }
+                    placeholder="Leave empty to create 'Photos' folder"
+                  />
+                  {!authStatus?.drive?.hasCredentials && (
+                    <p className="text-xs text-yellow-400">
+                      ⚠️ No credentials file found. Add credentials to enable.
+                    </p>
+                  )}
+                </div>
+              )}
+            </Card>
 
-                {/* Google Photos Destination */}
-                <div className="p-4 bg-gray-700/30 rounded-lg space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-gray-700/50 rounded-lg text-gray-400">
-                        <Icons.Image />
-                      </div>
-                      <div>
-                        <p className="font-medium">Google Photos</p>
-                        <p className="text-sm text-gray-400">
-                          Upload to Google Photos library
-                        </p>
-                      </div>
-                    </div>
+            {/* Google Photos Destination */}
+            <Card>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-gray-700/50 rounded-lg">
+                    <Icons.Google />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Google Photos</h3>
+                    <p className="text-sm text-gray-400">
+                      {authStatus?.photos?.authenticated
+                        ? 'Connected and ready'
+                        : authStatus?.photos?.hasCredentials
+                          ? 'Credentials found, needs authentication'
+                          : 'Upload to Google Photos library'}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {authStatus?.photos?.authenticated && (
+                    <StatusBadge status="authenticated" />
+                  )}
+                  {!authStatus?.photos?.authenticated &&
+                    authStatus?.photos?.hasCredentials && (
+                      <button
+                        onClick={() => handleGoogleConnect('photos')}
+                        className="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg text-sm font-medium transition-colors"
+                      >
+                        Connect
+                      </button>
+                    )}
+                  {authStatus?.photos?.authenticated && (
                     <Toggle
                       checked={
                         settings.destinations?.googlePhotos?.enabled ?? false
@@ -1035,49 +1065,24 @@ function App() {
                         updateSetting('destinations.googlePhotos.enabled', v)
                       }
                     />
-                  </div>
-                  {settings.destinations?.googlePhotos?.enabled && (
-                    <p className="text-xs text-gray-500">
-                      Go to Google Auth tab to connect your Google account.
-                    </p>
                   )}
                 </div>
               </div>
-
-              <p className="text-xs text-gray-500 mt-4">
-                💡 After changing destination settings, click "Save Settings"
-                to apply changes.
-              </p>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === 'auth' && (
-          <div className="space-y-6">
-            <Card>
-              <h2 className="text-lg font-semibold mb-2">
-                Google Authentication
-              </h2>
-              <p className="text-gray-400 text-sm mb-6">
-                Connect your Google accounts to enable cloud photo uploads. Make
-                sure you have the credentials JSON files in the config folder.
-              </p>
+              {settings.destinations?.googlePhotos?.enabled &&
+                !authStatus?.photos?.hasCredentials && (
+                  <div className="pt-4 border-t border-gray-700/50">
+                    <p className="text-xs text-yellow-400">
+                      ⚠️ No credentials file found. Add credentials to enable.
+                    </p>
+                  </div>
+                )}
             </Card>
 
-            <GoogleAuthCard
-              service="drive"
-              status={authStatus?.drive}
-              onConnect={handleGoogleConnect}
-            />
-
-            <GoogleAuthCard
-              service="photos"
-              status={authStatus?.photos}
-              onConnect={handleGoogleConnect}
-            />
-
+            {/* Setup Instructions */}
             <Card className="bg-blue-500/10 border-blue-500/20">
-              <h3 className="font-semibold mb-2">Setup Instructions</h3>
+              <h3 className="font-semibold mb-2">
+                Google API Setup Instructions
+              </h3>
               <ol className="text-sm text-gray-300 space-y-2 list-decimal list-inside">
                 <li>
                   Create a project in{' '}
@@ -1102,9 +1107,16 @@ function App() {
                     config/google-photos-credentials.json
                   </code>
                 </li>
-                <li>Click "Connect" above to authenticate</li>
+                <li>
+                  Click "Connect" on the destination above to authenticate
+                </li>
               </ol>
             </Card>
+
+            <p className="text-xs text-gray-500">
+              💡 After changing destination settings, click "Save Settings" to
+              apply changes.
+            </p>
           </div>
         )}
       </main>

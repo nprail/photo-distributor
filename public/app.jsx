@@ -343,6 +343,82 @@ function Input({
   )
 }
 
+// FileUploadButton Component
+function FileUploadButton({
+  label,
+  onUpload,
+  accept = '.json',
+  className = '',
+}) {
+  const fileInputRef = React.useRef(null)
+  const [dragActive, setDragActive] = React.useState(false)
+
+  const handleDrag = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true)
+    } else if (e.type === 'dragleave') {
+      setDragActive(false)
+    }
+  }
+
+  const handleDrop = (e) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragActive(false)
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      onUpload(e.dataTransfer.files[0])
+    }
+  }
+
+  const handleChange = (e) => {
+    e.preventDefault()
+    if (e.target.files && e.target.files[0]) {
+      onUpload(e.target.files[0])
+    }
+  }
+
+  const handleClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  return (
+    <div
+      className={`relative ${className}`}
+      onDragEnter={handleDrag}
+      onDragLeave={handleDrag}
+      onDragOver={handleDrag}
+      onDrop={handleDrop}
+    >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={accept}
+        onChange={handleChange}
+        className="hidden"
+      />
+      <button
+        onClick={handleClick}
+        className={`w-full px-4 py-3 rounded-lg border-2 border-dashed transition-all ${
+          dragActive
+            ? 'border-primary bg-primary/10 scale-105'
+            : 'border-gray-600 hover:border-primary/50 hover:bg-gray-700/30'
+        }`}
+      >
+        <div className="flex flex-col items-center gap-2">
+          <Icons.Upload />
+          <span className="text-sm font-medium">{label}</span>
+          <span className="text-xs text-gray-500">
+            Click to browse or drag and drop
+          </span>
+        </div>
+      </button>
+    </div>
+  )
+}
+
 // Received File Entry Component (new)
 function ReceivedFileEntry({ file, expanded, onToggle }) {
   const date = new Date(file.timestamp)
@@ -600,6 +676,42 @@ function App() {
       }
     } catch (err) {
       alert('Failed to start authentication: ' + err.message)
+    }
+  }
+
+  const handleCredentialsUpload = async (service, file) => {
+    try {
+      // Validate it's a JSON file
+      if (!file.name.endsWith('.json')) {
+        alert('Please upload a JSON file')
+        return
+      }
+
+      const formData = new FormData()
+      formData.append('credentials', file)
+
+      const res = await fetch(`/api/auth/google/${service}/credentials`, {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to upload credentials')
+      }
+
+      // Refetch auth status to show the new state
+      await fetchData(true)
+
+      // Show success message briefly
+      setSuccessMessage(data.message)
+      setTimeout(() => setSuccessMessage(null), 3000)
+
+      // Auto-trigger connect flow after successful upload
+      setTimeout(() => handleGoogleConnect(service), 500)
+    } catch (err) {
+      alert('Failed to upload credentials: ' + err.message)
     }
   }
 
@@ -1001,6 +1113,17 @@ function App() {
                   )}
                 </div>
               </div>
+              {!authStatus?.drive?.hasCredentials && (
+                <div className="pt-4 border-t border-gray-700/50">
+                  <FileUploadButton
+                    label="Upload Google Drive Credentials"
+                    onUpload={(file) => handleCredentialsUpload('drive', file)}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Upload your OAuth 2.0 credentials JSON file to get started
+                  </p>
+                </div>
+              )}
               {settings.destinations?.googleDrive?.enabled && (
                 <div className="pt-4 border-t border-gray-700/50 space-y-4">
                   <Input
@@ -1016,11 +1139,6 @@ function App() {
                     }
                     placeholder="Leave empty to create 'Photos' folder"
                   />
-                  {!authStatus?.drive?.hasCredentials && (
-                    <p className="text-xs text-yellow-400">
-                      ⚠️ No credentials file found. Add credentials to enable.
-                    </p>
-                  )}
                 </div>
               )}
             </Card>
@@ -1068,14 +1186,17 @@ function App() {
                   )}
                 </div>
               </div>
-              {settings.destinations?.googlePhotos?.enabled &&
-                !authStatus?.photos?.hasCredentials && (
-                  <div className="pt-4 border-t border-gray-700/50">
-                    <p className="text-xs text-yellow-400">
-                      ⚠️ No credentials file found. Add credentials to enable.
-                    </p>
-                  </div>
-                )}
+              {!authStatus?.photos?.hasCredentials && (
+                <div className="pt-4 border-t border-gray-700/50">
+                  <FileUploadButton
+                    label="Upload Google Photos Credentials"
+                    onUpload={(file) => handleCredentialsUpload('photos', file)}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Upload your OAuth 2.0 credentials JSON file to get started
+                  </p>
+                </div>
+              )}
             </Card>
 
             {/* Setup Instructions */}
@@ -1098,17 +1219,10 @@ function App() {
                 <li>Create OAuth 2.0 credentials (Desktop app type)</li>
                 <li>Download the credentials JSON file</li>
                 <li>
-                  Save as{' '}
-                  <code className="bg-gray-800 px-1 rounded">
-                    config/google-drive-credentials.json
-                  </code>{' '}
-                  or{' '}
-                  <code className="bg-gray-800 px-1 rounded">
-                    config/google-photos-credentials.json
-                  </code>
+                  Click "Upload Credentials" above and select your JSON file
                 </li>
                 <li>
-                  Click "Connect" on the destination above to authenticate
+                  Click "Connect" to authenticate with your Google account
                 </li>
               </ol>
             </Card>

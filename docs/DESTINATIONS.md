@@ -80,10 +80,14 @@ Upload files to Google Drive with automatic folder organization.
 1. Create a project in [Google Cloud Console](https://console.cloud.google.com/)
 2. Enable the **Google Drive API**
 3. Create OAuth 2.0 credentials (Desktop app type)
-4. Download the credentials JSON file to `config/google-drive-credentials.json`
-5. Open the web dashboard and go to the Destinations tab
-6. Click "Connect" next to Google Drive and authorize access
-7. Enable Google Drive in the Settings tab
+4. Download the credentials JSON file from Google Cloud Console
+5. Start the server and open the web dashboard at `http://localhost:3001`
+6. Go to the Destinations tab
+7. **Upload your credentials** by clicking "Upload Credentials" next to Google Drive and selecting your downloaded JSON file
+8. Click "Connect" to authorize access in your browser
+9. Enable Google Drive in the Settings tab
+
+**Alternative:** You can manually save the credentials file as `config/google-drive-credentials.json` instead of using the web upload.
 
 ### 3. Google Photos
 
@@ -98,10 +102,14 @@ Upload files directly to Google Photos with automatic album organization.
 1. Create a project in [Google Cloud Console](https://console.cloud.google.com/)
 2. Enable the **Photos Library API**
 3. Create OAuth 2.0 credentials (Desktop app type)
-4. Download the credentials JSON file to `config/google-photos-credentials.json`
-5. Open the web dashboard and go to the Destinations tab
-6. Click "Connect" next to Google Photos and authorize access
-7. Enable Google Photos in the Settings tab
+4. Download the credentials JSON file from Google Cloud Console
+5. Start the server and open the web dashboard at `http://localhost:3001`
+6. Go to the Destinations tab
+7. **Upload your credentials** by clicking "Upload Credentials" next to Google Photos and selecting your downloaded JSON file
+8. Click "Connect" to authorize access in your browser
+9. Enable Google Photos in the Settings tab
+
+**Alternative:** You can manually save the credentials file as `config/google-photos-credentials.json` instead of using the web upload.
 
 ## Example settings.json
 

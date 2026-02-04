@@ -8,7 +8,7 @@ An FTP server that automatically organizes uploaded photos and videos into date-
 - **EXIF Metadata Extraction**: Reads capture date from photo EXIF data for accurate organization
 - **Multiple Format Support**: Handles common photo and video formats including RAW files
 - **Duplicate Handling**: Automatically renames files if a file with the same name already exists
-- **Anonymous FTP Access**: Simple setup with no authentication required (can be customized)
+- **FTP Authentication**: Supports both anonymous access and username/password authentication
 
 ## Supported File Formats
 
@@ -55,8 +55,8 @@ ftp localhost 2121
 # Or use GUI clients like FileZilla, Cyberduck, etc.
 # Host: localhost (or your server IP)
 # Port: 2121 (or your configured port)
-# Username: any (anonymous access)
-# Password: any
+# Username: anonymous (default) or configured FTP_USERNAME
+# Password: anonymous (default) or configured FTP_PASSWORD
 ```
 
 ## Configuration
@@ -70,6 +70,8 @@ The server is configured using environment variables. You can create a `.env` fi
 | `FTP_PORT` | `21` | FTP server port. Use 2121+ to avoid requiring root privileges |
 | `FTP_HOST` | `0.0.0.0` | Host address to bind to. Use `0.0.0.0` for all interfaces or a specific IP |
 | `PASV_URL` | `0.0.0.0` | Public IP for passive mode connections (important for remote clients) |
+| `FTP_USERNAME` | `anonymous` | Username for FTP authentication |
+| `FTP_PASSWORD` | `anonymous` | Password for FTP authentication |
 
 ### Directory Configuration
 
@@ -140,6 +142,10 @@ PASV_URL=192.168.1.100
 
 PHOTOS_DIR=/path/to/photos
 LOG_DIR=/path/to/logs
+
+# FTP Authentication (optional)
+FTP_USERNAME=myuser
+FTP_PASSWORD=mypassword
 
 DESTINATION_LOCAL_ENABLED=true
 DESTINATION_GOOGLE_DRIVE_ENABLED=false

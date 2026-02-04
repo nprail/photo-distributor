@@ -9,6 +9,8 @@ const config = {
   ftpPort: process.env.FTP_PORT || 21,
   ftpHost: process.env.FTP_HOST || '0.0.0.0',
   pasvUrl: process.env.PASV_URL || '0.0.0.0',
+  ftpUsername: process.env.FTP_USERNAME || 'anonymous',
+  ftpPassword: process.env.FTP_PASSWORD || 'anonymous',
 
   // Directory Settings
   photosDir: process.env.PHOTOS_DIR || path.join(process.cwd(), 'photos'),

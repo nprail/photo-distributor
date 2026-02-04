@@ -1,5 +1,6 @@
 import FtpSrv from 'ftp-srv'
 import { promises as fs } from 'fs'
+import bcrypt from 'bcrypt'
 
 import config from './config.js'
 import { PHOTO_EXTENSIONS } from './lib/exif.js'
@@ -21,6 +22,8 @@ const VIDEO_EXTENSIONS = [
   '.wmv',
 ]
 const SUPPORTED_EXTENSIONS = [...PHOTO_EXTENSIONS, ...VIDEO_EXTENSIONS]
+
+const passwordHash = await bcrypt.hash(config.ftpPassword, 10)
 
 async function setupDestinations() {
   console.log('\n📦 Setting up upload destinations...')
@@ -70,7 +73,7 @@ async function startServer() {
 
   const ftpServer = new FtpSrv({
     url: `ftp://${config.ftpHost}:${config.ftpPort}`,
-    anonymous: true,
+    anonymous: false,
     pasv_url: config.pasvUrl,
     pasv_min: 1024,
     pasv_max: 1048,
@@ -82,14 +85,35 @@ async function startServer() {
 
   ftpServer.on(
     'login',
-    ({ connection, username, password }, resolve, reject) => {
-      console.log(`Login attempt: ${username}`)
+    async ({ connection, username, password }, resolve, reject) => {
+      try {
+        console.log(`Login attempt: ${username}`)
 
-      resolve({
-        fs: new PhotoFileSystem(connection, {
-          SUPPORTED_EXTENSIONS,
-        }),
-      })
+        const passwordMatches = await bcrypt.compare(password, passwordHash)
+
+        if (username === config.ftpUsername && passwordMatches) {
+          console.log(`✅ User ${username} authenticated successfully`)
+          resolve({
+            fs: new PhotoFileSystem(connection, {
+              SUPPORTED_EXTENSIONS,
+            }),
+          })
+        } else {
+          console.log(`❌ Authentication failed for user ${username}`)
+          const error = new Error('Invalid username or password')
+          error.code = 401
+          error.name = 'GeneralError'
+          reject(error)
+        }
+      } catch (error) {
+        console.error(
+          `❌ Error during login for user ${username}: ${error.message}`,
+        )
+        const err = new Error('Authentication error')
+        err.code = 500
+        err.name = 'GeneralError'
+        reject(err)
+      }
     },
   )
 

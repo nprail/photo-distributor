@@ -4,7 +4,9 @@ This document explains how to configure different upload destinations for the Ph
 
 ## Overview
 
-The modular destination system allows you to upload files to multiple destinations simultaneously. Each destination is independent and can be enabled/disabled via environment variables.
+The modular destination system allows you to upload files to multiple destinations simultaneously. Each destination is independent and can be enabled/disabled via the web dashboard.
+
+All destination settings are stored in `config/settings.json` and can be managed through the web dashboard at `http://localhost:3001` under the Settings tab. Changes take effect immediately when you click Save.
 
 ## Available Destinations
 
@@ -12,25 +14,19 @@ The modular destination system allows you to upload files to multiple destinatio
 
 Files are organized into date-based folders on your local filesystem.
 
-**Configuration:**
+**Settings (via web dashboard):**
 
-```bash
-DESTINATION_LOCAL_ENABLED=true  # Default: true
-PHOTOS_DIR=/path/to/photos       # Default: ./photos
-```
+- **Enabled**: Toggle on/off
+- **Photos Directory**: Path where organized photos are stored (default: `./photos`)
 
 ### 2. Google Drive
 
 Upload files to Google Drive with automatic folder organization.
 
-**Configuration:**
+**Settings (via web dashboard):**
 
-```bash
-DESTINATION_GOOGLE_DRIVE_ENABLED=true
-GOOGLE_DRIVE_CREDENTIALS=/path/to/credentials.json
-GOOGLE_DRIVE_TOKEN=/path/to/token.json
-GOOGLE_DRIVE_ROOT_FOLDER_ID=optional_folder_id
-```
+- **Enabled**: Toggle on/off
+- **Root Folder ID**: Optional folder ID to upload into (leave empty to create a 'Photos' folder)
 
 **Setup:**
 
@@ -38,21 +34,17 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID=optional_folder_id
 2. Enable the **Google Drive API**
 3. Create OAuth 2.0 credentials (Desktop app type)
 4. Download the credentials JSON file to `config/google-drive-credentials.json`
-5. Open the web dashboard in your browser
-6. Go to the Destinations section and follow the prompts to connect your Google account
-7. Set the environment variables above
+5. Open the web dashboard and go to the Google Auth tab
+6. Click "Connect" next to Google Drive and authorize access
+7. Enable Google Drive in the Settings tab
 
 ### 3. Google Photos
 
 Upload files directly to Google Photos with automatic album organization.
 
-**Configuration:**
+**Settings (via web dashboard):**
 
-```bash
-DESTINATION_GOOGLE_PHOTOS_ENABLED=true
-GOOGLE_PHOTOS_CREDENTIALS=/path/to/credentials.json
-GOOGLE_PHOTOS_TOKEN=/path/to/token.json
-```
+- **Enabled**: Toggle on/off
 
 **Setup:**
 
@@ -60,35 +52,44 @@ GOOGLE_PHOTOS_TOKEN=/path/to/token.json
 2. Enable the **Photos Library API**
 3. Create OAuth 2.0 credentials (Desktop app type)
 4. Download the credentials JSON file to `config/google-photos-credentials.json`
-5. Open the web dashboard in your browser
-6. Go to the Destinations section and follow the prompts to connect your Google account
-7. Set the environment variables above
+5. Open the web dashboard and go to the Google Auth tab
+6. Click "Connect" next to Google Photos and authorize access
+7. Enable Google Photos in the Settings tab
 
-## Example .env File
+## Example settings.json
 
-```bash
-# FTP Server
-FTP_PORT=2121
-FTP_HOST=0.0.0.0
-PASV_URL=192.168.1.100
-
-# Local Destination
-DESTINATION_LOCAL_ENABLED=true
-PHOTOS_DIR=/path/to/photos
-
-# Google Drive Destination
-DESTINATION_GOOGLE_DRIVE_ENABLED=true
-GOOGLE_DRIVE_CREDENTIALS=./config/google-drive-credentials.json
-GOOGLE_DRIVE_TOKEN=./config/google-drive-token.json
-
-# Google Photos Destination
-DESTINATION_GOOGLE_PHOTOS_ENABLED=true
-GOOGLE_PHOTOS_CREDENTIALS=./config/google-photos-credentials.json
-GOOGLE_PHOTOS_TOKEN=./config/google-photos-token.json
-
-# Delete source file after successful upload
-DELETE_AFTER_UPLOAD=true
+```json
+{
+  "ftp": {
+    "username": "anonymous",
+    "password": "anonymous"
+  },
+  "directories": {
+    "photosDir": "./photos",
+    "logDir": "./logs"
+  },
+  "deleteAfterUpload": true,
+  "destinations": {
+    "local": {
+      "enabled": true,
+      "photosDir": "./photos"
+    },
+    "googleDrive": {
+      "enabled": true,
+      "credentialsPath": "./config/google-drive-credentials.json",
+      "tokenPath": "./config/google-drive-token.json",
+      "rootFolderId": null
+    },
+    "googlePhotos": {
+      "enabled": false,
+      "credentialsPath": "./config/google-photos-credentials.json",
+      "tokenPath": "./config/google-photos-token.json"
+    }
+  }
+}
 ```
+
+Note: It's recommended to use the web dashboard to edit settings rather than manually editing this file.
 
 ## Adding New Destinations
 

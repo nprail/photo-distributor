@@ -3,6 +3,7 @@ import { promises as fs } from 'fs'
 import bcrypt from 'bcrypt'
 
 import config from './config.js'
+import settings from './lib/settings.js'
 import { PHOTO_EXTENSIONS } from './lib/exif.js'
 import { PhotoFileSystem } from './lib/photos-fs.js'
 import {
@@ -24,27 +25,28 @@ const VIDEO_EXTENSIONS = [
 ]
 const SUPPORTED_EXTENSIONS = [...PHOTO_EXTENSIONS, ...VIDEO_EXTENSIONS]
 
-const passwordHash = await bcrypt.hash(config.ftpPassword, 10)
-
-async function setupDestinations() {
+export async function setupDestinations() {
   console.log('\n📦 Setting up upload destinations...')
 
+  // Clear existing destinations
+  destinationManager.clear()
+
   // Register local destination
-  if (config.destinations.local.enabled) {
-    destinationManager.register(new LocalDestination(config.destinations.local))
+  if (settings.destinations.local.enabled) {
+    destinationManager.register(new LocalDestination(settings.destinations.local))
   }
 
   // Register Google Drive destination
-  if (config.destinations.googleDrive.enabled) {
+  if (settings.destinations.googleDrive.enabled) {
     destinationManager.register(
-      new GoogleDriveDestination(config.destinations.googleDrive),
+      new GoogleDriveDestination(settings.destinations.googleDrive),
     )
   }
 
   // Register Google Photos destination
-  if (config.destinations.googlePhotos.enabled) {
+  if (settings.destinations.googlePhotos.enabled) {
     destinationManager.register(
-      new GooglePhotosDestination(config.destinations.googlePhotos),
+      new GooglePhotosDestination(settings.destinations.googlePhotos),
     )
   }
 
@@ -65,9 +67,13 @@ async function setupDestinations() {
 }
 
 async function startServer() {
-  await fs.mkdir(config.photosDir, { recursive: true })
-  await fs.mkdir(config.uploadDir, { recursive: true })
-  await fs.mkdir(config.logDir, { recursive: true })
+  // Load settings first
+  await settings.reload()
+  console.log('📋 Settings loaded from config/settings.json')
+
+  await fs.mkdir(settings.photosDir, { recursive: true })
+  await fs.mkdir(settings.uploadDir, { recursive: true })
+  await fs.mkdir(settings.logDir, { recursive: true })
 
   // Setup upload destinations
   await setupDestinations()
@@ -90,9 +96,22 @@ async function startServer() {
       try {
         console.log(`Login attempt: ${username}`)
 
-        const passwordMatches = await bcrypt.compare(password, passwordHash)
+        // Reload settings to get latest credentials (allows live updates)
+        await settings.reload()
 
-        if (username === config.ftpUsername && passwordMatches) {
+        // Check credentials - compare password with bcrypt if it looks like a hash, otherwise direct compare
+        const storedPassword = settings.ftpPassword
+        let passwordMatches = false
+        
+        if (storedPassword.startsWith('$2')) {
+          // Password is bcrypt hashed
+          passwordMatches = await bcrypt.compare(password, storedPassword)
+        } else {
+          // Password is plain text
+          passwordMatches = password === storedPassword
+        }
+
+        if (username === settings.ftpUsername && passwordMatches) {
           console.log(`✅ User ${username} authenticated successfully`)
           resolve({
             fs: new PhotoFileSystem(connection, {

@@ -59,71 +59,38 @@ ftp localhost 2121
 # Or use GUI clients like FileZilla, Cyberduck, etc.
 # Host: localhost (or your server IP)
 # Port: 2121 (or your configured port)
-# Username: anonymous (default) or configured FTP_USERNAME
-# Password: anonymous (default) or configured FTP_PASSWORD
+# Username: anonymous (default)
+# Password: anonymous (default)
 ```
 
 ## Configuration
 
-The server is configured using environment variables. You can create a `.env` file in the project root to define these values, or set them directly when running the server.
+The server uses two types of configuration:
 
-### FTP Server Configuration
+1. **Environment Variables** - Server startup settings that require a restart to change (ports, host bindings)
+2. **Settings File** - Runtime settings that can be changed via the web dashboard without restarting (`config/settings.json`)
 
-| Variable       | Default     | Description                                                                |
-| -------------- | ----------- | -------------------------------------------------------------------------- |
-| `FTP_PORT`     | `21`        | FTP server port. Use 2121+ to avoid requiring root privileges              |
-| `FTP_HOST`     | `0.0.0.0`   | Host address to bind to. Use `0.0.0.0` for all interfaces or a specific IP |
-| `PASV_URL`     | `0.0.0.0`   | Public IP for passive mode connections (important for remote clients)      |
-| `FTP_USERNAME` | `anonymous` | Username for FTP authentication                                            |
-| `FTP_PASSWORD` | `anonymous` | Password for FTP authentication                                            |
+### Environment Variables
 
-### Directory Configuration
+These settings require a server restart to take effect. You can set them directly or use a `.env` file.
 
-| Variable     | Default         | Description                                           |
-| ------------ | --------------- | ----------------------------------------------------- |
-| `PHOTOS_DIR` | `./photos`      | Directory where organized photos will be stored       |
-| `UPLOAD_DIR` | System temp dir | Temporary directory for FTP uploads during processing |
-| `LOG_DIR`    | `./logs`        | Directory where upload logs will be stored            |
+| Variable   | Default   | Description                                                                |
+| ---------- | --------- | -------------------------------------------------------------------------- |
+| `FTP_PORT` | `21`      | FTP server port. Use 2121+ to avoid requiring root privileges              |
+| `FTP_HOST` | `0.0.0.0` | Host address to bind to. Use `0.0.0.0` for all interfaces or a specific IP |
+| `PASV_URL` | `0.0.0.0` | Public IP for passive mode connections (important for remote clients)      |
+| `WEB_PORT` | `3001`    | Port for the web dashboard                                                 |
 
-### Destination Configuration
+### Web Dashboard Settings
 
-Each destination can be independently enabled or disabled:
+All other settings are configured through the web dashboard and stored in `config/settings.json`. These can be changed at runtime without restarting the server:
 
-#### Local Filesystem
+- **FTP Credentials** - Username and password for FTP authentication
+- **Directories** - Photos directory, log directory paths
+- **Upload Behavior** - Whether to delete source files after upload
+- **Destinations** - Enable/disable and configure Local, Google Drive, and Google Photos destinations
 
-| Variable                    | Default    | Description                                 |
-| --------------------------- | ---------- | ------------------------------------------- |
-| `DESTINATION_LOCAL_ENABLED` | `true`     | Enable/disable local filesystem destination |
-| `PHOTOS_DIR`                | `./photos` | Where to store organized photos locally     |
-
-#### Google Drive
-
-| Variable                           | Default                                  | Description                                          |
-| ---------------------------------- | ---------------------------------------- | ---------------------------------------------------- |
-| `DESTINATION_GOOGLE_DRIVE_ENABLED` | `false`                                  | Enable/disable Google Drive uploads                  |
-| `GOOGLE_DRIVE_CREDENTIALS`         | `./config/google-drive-credentials.json` | Path to Google Drive credentials file                |
-| `GOOGLE_DRIVE_TOKEN`               | `./config/google-drive-token.json`       | Path to Google Drive token file                      |
-| `GOOGLE_DRIVE_ROOT_FOLDER_ID`      | (none)                                   | Optional: Root folder ID in Google Drive for uploads |
-
-#### Google Photos
-
-| Variable                            | Default                                   | Description                            |
-| ----------------------------------- | ----------------------------------------- | -------------------------------------- |
-| `DESTINATION_GOOGLE_PHOTOS_ENABLED` | `false`                                   | Enable/disable Google Photos uploads   |
-| `GOOGLE_PHOTOS_CREDENTIALS`         | `./config/google-photos-credentials.json` | Path to Google Photos credentials file |
-| `GOOGLE_PHOTOS_TOKEN`               | `./config/google-photos-token.json`       | Path to Google Photos token file       |
-
-### Web Dashboard Configuration
-
-| Variable   | Default | Description                |
-| ---------- | ------- | -------------------------- |
-| `WEB_PORT` | `3001`  | Port for the web dashboard |
-
-### General Options
-
-| Variable              | Default | Description                                                    |
-| --------------------- | ------- | -------------------------------------------------------------- |
-| `DELETE_AFTER_UPLOAD` | `true`  | Delete source file after successful upload to all destinations |
+Open the web dashboard at `http://localhost:3001` (or your configured `WEB_PORT`) to manage these settings.
 
 ### Example Configurations
 
@@ -139,36 +106,13 @@ FTP_PORT=2121 npm start
 FTP_PORT=2121 FTP_HOST=0.0.0.0 PASV_URL=192.168.1.100 npm start
 ```
 
-**With Google Drive and local storage:**
-
-```bash
-FTP_PORT=2121 \
-DESTINATION_LOCAL_ENABLED=true \
-DESTINATION_GOOGLE_DRIVE_ENABLED=true \
-GOOGLE_DRIVE_CREDENTIALS=./config/google-drive-credentials.json \
-GOOGLE_DRIVE_TOKEN=./config/google-drive-token.json \
-npm start
-```
-
 **Sample .env file:**
 
 ```env
 FTP_PORT=2121
 FTP_HOST=0.0.0.0
 PASV_URL=192.168.1.100
-
-PHOTOS_DIR=/path/to/photos
-LOG_DIR=/path/to/logs
-
-# FTP Authentication (optional)
-FTP_USERNAME=myuser
-FTP_PASSWORD=mypassword
-
-DESTINATION_LOCAL_ENABLED=true
-DESTINATION_GOOGLE_DRIVE_ENABLED=false
-DESTINATION_GOOGLE_PHOTOS_ENABLED=false
-
-DELETE_AFTER_UPLOAD=true
+WEB_PORT=3001
 ```
 
 ## Destinations
@@ -181,11 +125,13 @@ Files are automatically uploaded to configured destinations, each organizing the
 
 Multiple destinations can be enabled simultaneously to upload files to all of them.
 
+All destination settings are configured through the web dashboard at `http://localhost:3001` under the Settings tab.
+
 ### Google OAuth Setup
 
-Google Drive and Google Photos authentication is managed through the built-in web dashboard. Open the dashboard in your browser, navigate to the Destinations section, and follow the prompts to connect your Google account.
+Google Drive and Google Photos authentication is managed through the web dashboard. Navigate to the Google Auth tab and follow the prompts to connect your Google account.
 
-See [docs/DESTINATIONS.md](docs/DESTINATIONS.md) for setup instructions and configuration options.
+See [docs/DESTINATIONS.md](docs/DESTINATIONS.md) for detailed setup instructions.
 
 ## Behavior
 

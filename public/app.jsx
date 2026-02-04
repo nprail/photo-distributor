@@ -172,6 +172,44 @@ const Icons = {
       />
     </svg>
   ),
+  Settings: () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-5 w-5"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+      />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+      />
+    </svg>
+  ),
+  Save: () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-5 w-5"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+      />
+    </svg>
+  ),
 }
 
 // Status Badge Component
@@ -271,7 +309,13 @@ function GoogleAuthCard({ service, status, onConnect }) {
 }
 
 // Destination Card
-function DestinationCard({ name, enabled, type }) {
+function DestinationCard({
+  name,
+  enabled,
+  type,
+  onToggle,
+  showToggle = false,
+}) {
   const iconMap = {
     LocalDestination: Icons.Folder,
     GoogleDriveDestination: Icons.Cloud,
@@ -287,7 +331,60 @@ function DestinationCard({ name, enabled, type }) {
         </div>
         <span className="font-medium">{name}</span>
       </div>
-      <StatusBadge status={enabled ? 'enabled' : 'disabled'} />
+      <div className="flex items-center gap-3">
+        <StatusBadge status={enabled ? 'enabled' : 'disabled'} />
+        {showToggle && onToggle && (
+          <Toggle checked={enabled} onChange={onToggle} />
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Toggle Component
+function Toggle({ checked, onChange, disabled = false }) {
+  return (
+    <button
+      onClick={() => !disabled && onChange(!checked)}
+      disabled={disabled}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+        disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+      } ${checked ? 'bg-primary' : 'bg-gray-600'}`}
+    >
+      <span
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+          checked ? 'translate-x-6' : 'translate-x-1'
+        }`}
+      />
+    </button>
+  )
+}
+
+// Input Component
+function Input({
+  label,
+  type = 'text',
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  className = '',
+}) {
+  return (
+    <div className={className}>
+      {label && (
+        <label className="block text-sm font-medium text-gray-400 mb-1">
+          {label}
+        </label>
+      )}
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
+      />
     </div>
   )
 }
@@ -364,18 +461,27 @@ function App() {
   const [logs, setLogs] = useState([])
   const [authStatus, setAuthStatus] = useState(null)
   const [destinations, setDestinations] = useState([])
+  const [settings, setSettings] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [successMessage, setSuccessMessage] = useState(null)
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (includeSettings = false) => {
     try {
       setError(null)
-      const [statusRes, logsRes, authRes, destRes] = await Promise.all([
+      const fetches = [
         fetch('/api/status'),
         fetch('/api/logs?limit=50'),
         fetch('/api/auth/google/status'),
         fetch('/api/destinations'),
-      ])
+      ]
+      if (includeSettings) {
+        fetches.push(fetch('/api/settings'))
+      }
+
+      const [statusRes, logsRes, authRes, destRes, settingsRes] =
+        await Promise.all(fetches)
 
       if (!statusRes.ok) throw new Error('Failed to fetch status')
 
@@ -383,6 +489,9 @@ function App() {
       setLogs(await logsRes.json())
       setAuthStatus(await authRes.json())
       setDestinations(await destRes.json())
+      if (settingsRes) {
+        setSettings(await settingsRes.json())
+      }
     } catch (err) {
       setError(err.message)
     } finally {
@@ -391,8 +500,8 @@ function App() {
   }, [])
 
   useEffect(() => {
-    fetchData()
-    const interval = setInterval(fetchData, 5000)
+    fetchData(true) // Include settings on initial load
+    const interval = setInterval(() => fetchData(false), 5000) // Don't refresh settings on interval
     return () => clearInterval(interval)
   }, [fetchData])
 
@@ -410,9 +519,50 @@ function App() {
     }
   }
 
+  const handleSaveSettings = async () => {
+    try {
+      setSaving(true)
+      setError(null)
+      const res = await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to save settings')
+      
+      if (data.destinations) {
+        setDestinations(data.destinations)
+      }
+      
+      setSuccessMessage(data.message || 'Settings saved')
+      setTimeout(() => setSuccessMessage(null), 3000)
+      fetchData()
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const updateSetting = (path, value) => {
+    setSettings((prev) => {
+      const newSettings = { ...prev }
+      const keys = path.split('.')
+      let current = newSettings
+      for (let i = 0; i < keys.length - 1; i++) {
+        current[keys[i]] = { ...current[keys[i]] }
+        current = current[keys[i]]
+      }
+      current[keys[keys.length - 1]] = value
+      return newSettings
+    })
+  }
+
   const tabs = [
     { id: 'status', label: 'Status' },
     { id: 'logs', label: 'Upload Logs' },
+    { id: 'settings', label: 'Settings' },
     { id: 'auth', label: 'Google Auth' },
   ]
 
@@ -455,6 +605,12 @@ function App() {
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-red-400">
             Error: {error}
+          </div>
+        )}
+
+        {successMessage && (
+          <div className="mb-6 p-4 bg-green-500/20 border border-green-500/30 rounded-lg text-green-400">
+            {successMessage}
           </div>
         )}
 
@@ -559,6 +715,218 @@ function App() {
               )}
             </div>
           </Card>
+        )}
+
+        {activeTab === 'settings' && settings && (
+          <div className="space-y-6">
+            {/* Save Button */}
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold">Settings</h2>
+                <p className="text-gray-400 text-sm">
+                  Configure server settings.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSaveSettings}
+                  disabled={saving}
+                  className="px-4 py-2 bg-primary hover:bg-primary/80 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  <Icons.Save />
+                  {saving ? 'Saving...' : 'Save Settings'}
+                </button>
+              </div>
+            </div>
+
+            {/* FTP Credentials */}
+            <Card>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Icons.Server /> FTP Credentials
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Username"
+                  value={settings.ftp?.username || ''}
+                  onChange={(v) => updateSetting('ftp.username', v)}
+                  placeholder="anonymous"
+                />
+                <Input
+                  label="Password"
+                  type="password"
+                  value={settings.ftp?.password || ''}
+                  onChange={(v) => updateSetting('ftp.password', v)}
+                  placeholder="••••••••"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-4">
+                ✅ Credential changes take effect immediately for new
+                connections.
+              </p>
+            </Card>
+
+            {/* Directories */}
+            <Card>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Icons.Folder /> Directories
+              </h3>
+              <div className="space-y-4">
+                <Input
+                  label="Photos Directory"
+                  value={settings.directories?.photosDir || ''}
+                  onChange={(v) => updateSetting('directories.photosDir', v)}
+                  placeholder="/path/to/photos"
+                />
+                <p className="text-xs text-gray-500">
+                  Where organized photos are stored locally.
+                </p>
+              </div>
+            </Card>
+
+            {/* Upload Behavior */}
+            <Card>
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Icons.Upload /> Upload Behavior
+              </h3>
+              <div className="flex items-center justify-between p-4 bg-gray-700/30 rounded-lg">
+                <div>
+                  <p className="font-medium">Delete After Upload</p>
+                  <p className="text-sm text-gray-400">
+                    Delete source file after successful upload to all
+                    destinations
+                  </p>
+                </div>
+                <Toggle
+                  checked={settings.deleteAfterUpload ?? true}
+                  onChange={(v) => updateSetting('deleteAfterUpload', v)}
+                />
+              </div>
+            </Card>
+
+            {/* Destinations */}
+            <Card>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <Icons.Cloud /> Upload Destinations
+                </h3>
+              </div>
+
+              {/* Local Destination */}
+              <div className="space-y-4">
+                <div className="p-4 bg-gray-700/30 rounded-lg space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gray-700/50 rounded-lg text-gray-400">
+                        <Icons.Folder />
+                      </div>
+                      <div>
+                        <p className="font-medium">Local Filesystem</p>
+                        <p className="text-sm text-gray-400">
+                          Save photos to local directory
+                        </p>
+                      </div>
+                    </div>
+                    <Toggle
+                      checked={settings.destinations?.local?.enabled ?? true}
+                      onChange={(v) =>
+                        updateSetting('destinations.local.enabled', v)
+                      }
+                    />
+                  </div>
+                  {settings.destinations?.local?.enabled && (
+                    <Input
+                      label="Photos Directory"
+                      value={settings.destinations?.local?.photosDir || ''}
+                      onChange={(v) =>
+                        updateSetting('destinations.local.photosDir', v)
+                      }
+                      placeholder="/path/to/photos"
+                    />
+                  )}
+                </div>
+
+                {/* Google Drive Destination */}
+                <div className="p-4 bg-gray-700/30 rounded-lg space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gray-700/50 rounded-lg text-gray-400">
+                        <Icons.Cloud />
+                      </div>
+                      <div>
+                        <p className="font-medium">Google Drive</p>
+                        <p className="text-sm text-gray-400">
+                          Upload to Google Drive
+                        </p>
+                      </div>
+                    </div>
+                    <Toggle
+                      checked={
+                        settings.destinations?.googleDrive?.enabled ?? false
+                      }
+                      onChange={(v) =>
+                        updateSetting('destinations.googleDrive.enabled', v)
+                      }
+                    />
+                  </div>
+                  {settings.destinations?.googleDrive?.enabled && (
+                    <div className="space-y-3">
+                      <Input
+                        label="Root Folder ID (optional)"
+                        value={
+                          settings.destinations?.googleDrive?.rootFolderId || ''
+                        }
+                        onChange={(v) =>
+                          updateSetting(
+                            'destinations.googleDrive.rootFolderId',
+                            v || null,
+                          )
+                        }
+                        placeholder="Leave empty to create 'Photos' folder"
+                      />
+                      <p className="text-xs text-gray-500">
+                        Go to Google Auth tab to connect your Google account.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Google Photos Destination */}
+                <div className="p-4 bg-gray-700/30 rounded-lg space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-gray-700/50 rounded-lg text-gray-400">
+                        <Icons.Image />
+                      </div>
+                      <div>
+                        <p className="font-medium">Google Photos</p>
+                        <p className="text-sm text-gray-400">
+                          Upload to Google Photos library
+                        </p>
+                      </div>
+                    </div>
+                    <Toggle
+                      checked={
+                        settings.destinations?.googlePhotos?.enabled ?? false
+                      }
+                      onChange={(v) =>
+                        updateSetting('destinations.googlePhotos.enabled', v)
+                      }
+                    />
+                  </div>
+                  {settings.destinations?.googlePhotos?.enabled && (
+                    <p className="text-xs text-gray-500">
+                      Go to Google Auth tab to connect your Google account.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-500 mt-4">
+                💡 After changing destination settings, click "Save Settings"
+                to apply changes.
+              </p>
+            </Card>
+          </div>
         )}
 
         {activeTab === 'auth' && (

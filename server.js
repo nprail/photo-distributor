@@ -1,0 +1,132 @@
+import FtpSrv from 'ftp-srv'
+import { promises as fs } from 'fs'
+
+import config from './config.js'
+import { PHOTO_EXTENSIONS } from './lib/exif.js'
+import { PhotoFileSystem } from './lib/photos-fs.js'
+import {
+  destinationManager,
+  LocalDestination,
+  GoogleDriveDestination,
+  GooglePhotosDestination,
+} from './lib/destinations/index.js'
+
+const VIDEO_EXTENSIONS = [
+  '.mp4',
+  '.mov',
+  '.avi',
+  '.mkv',
+  '.m4v',
+  '.3gp',
+  '.wmv',
+]
+const SUPPORTED_EXTENSIONS = [...PHOTO_EXTENSIONS, ...VIDEO_EXTENSIONS]
+
+async function setupDestinations() {
+  console.log('\n📦 Setting up upload destinations...')
+
+  // Register local destination
+  if (config.destinations.local.enabled) {
+    destinationManager.register(new LocalDestination(config.destinations.local))
+  }
+
+  // Register Google Drive destination
+  if (config.destinations.googleDrive.enabled) {
+    destinationManager.register(
+      new GoogleDriveDestination(config.destinations.googleDrive),
+    )
+  }
+
+  // Register Google Photos destination
+  if (config.destinations.googlePhotos.enabled) {
+    destinationManager.register(
+      new GooglePhotosDestination(config.destinations.googlePhotos),
+    )
+  }
+
+  // Initialize all destinations
+  await destinationManager.initializeAll()
+
+  const enabledDestinations = destinationManager.getEnabledDestinations()
+  if (enabledDestinations.length === 0) {
+    console.warn(
+      '\n⚠️  No destinations enabled! Files will be organized locally.',
+    )
+  } else {
+    console.log(`\n✅ ${enabledDestinations.length} destination(s) ready:`)
+    enabledDestinations.forEach((d) => {
+      console.log(`   - ${d.getName()}`)
+    })
+  }
+}
+
+async function startServer() {
+  await fs.mkdir(config.photosDir, { recursive: true })
+  await fs.mkdir(config.uploadDir, { recursive: true })
+  await fs.mkdir(config.logDir, { recursive: true })
+
+  // Setup upload destinations
+  await setupDestinations()
+
+  const ftpServer = new FtpSrv({
+    url: `ftp://${config.ftpHost}:${config.ftpPort}`,
+    anonymous: true,
+    pasv_url: config.pasvUrl,
+    pasv_min: 1024,
+    pasv_max: 1048,
+    greeting: [
+      'Welcome to Photos FTP Server',
+      'Files will be organized by date automatically',
+    ],
+  })
+
+  ftpServer.on(
+    'login',
+    ({ connection, username, password }, resolve, reject) => {
+      console.log(`Login attempt: ${username}`)
+
+      resolve({
+        fs: new PhotoFileSystem(connection, {
+          SUPPORTED_EXTENSIONS,
+        }),
+      })
+    },
+  )
+
+  ftpServer.on('client-error', ({ connection, context, error }) => {
+    console.error(`Client error: ${error.message}`)
+    console.error(error)
+  })
+
+  try {
+    await ftpServer.listen()
+    console.log(`\n📷 Photos FTP Server started!`)
+    console.log(`   FTP URL: ftp://${config.ftpHost}:${config.ftpPort}`)
+    console.log(`   Photos directory: ${config.photosDir}`)
+    console.log(`\n   Supported formats:`)
+    console.log(`   - Photos: ${PHOTO_EXTENSIONS.join(', ')}`)
+    console.log(`   - Videos: ${VIDEO_EXTENSIONS.join(', ')}`)
+    console.log(`\n   Files will be organized as: photos/<yyyy>/<yyyy-mm-dd>/`)
+    console.log(`\n   Waiting for connections...`)
+  } catch (error) {
+    console.error(`Failed to start server: ${error.message}`)
+    if (error.code === 'EACCES' && config.ftpPort < 1024) {
+      console.error(
+        `   Port ${config.ftpPort} requires elevated privileges. Try setting FTP_PORT to 2121 or higher.`,
+      )
+    }
+    process.exit(1)
+  }
+
+  // Handle graceful shutdown
+  const shutdown = async () => {
+    console.log('\n🛑 Shutting down...')
+    await destinationManager.cleanup()
+    process.exit(0)
+  }
+
+  process.on('SIGINT', shutdown)
+  process.on('SIGTERM', shutdown)
+}
+
+startServer()

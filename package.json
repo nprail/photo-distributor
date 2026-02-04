@@ -1,0 +1,26 @@
+{
+  "name": "photos-ftp-uploader",
+  "version": "1.0.0",
+  "description": "FTP server that organizes photos and videos by date",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon server.js",
+    "setup:google-drive": "node scripts/google-auth-setup.js --service drive",
+    "setup:google-photos": "node scripts/google-auth-setup.js --service photos"
+  },
+  "type": "module",
+  "keywords": [],
+  "author": "",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "exiftool-vendored": "^35.5.0",
+    "ftp-srv": "^4.6.3",
+    "googleapis": "^144.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}

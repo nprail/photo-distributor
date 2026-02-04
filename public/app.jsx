@@ -389,26 +389,110 @@ function Input({
   )
 }
 
-// Log Entry Component
-function LogEntry({ log }) {
-  const filename = log.original?.split('/').pop() || 'Unknown'
-  const date = new Date(log.timestamp)
+// Received File Entry Component (new)
+function ReceivedFileEntry({ file, expanded, onToggle }) {
+  const date = new Date(file.timestamp)
   const timeAgo = getTimeAgo(date)
+  const destinations = file.destinations || []
+  const successCount = destinations.filter((d) => d.success).length
+  const failCount = destinations.filter((d) => !d.success).length
+  const hasDestinations = destinations.length > 0
+
+  const formatSize = (bytes) => {
+    if (!bytes) return ''
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
 
   return (
-    <div className="flex items-center justify-between p-4 bg-gray-700/30 rounded-lg hover:bg-gray-700/50 transition-colors">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-green-500/20 rounded-lg text-green-400">
-          <Icons.Check />
+    <div className="bg-gray-700/30 rounded-lg hover:bg-gray-700/50 transition-colors overflow-hidden">
+      <div
+        className="flex items-center justify-between p-4 cursor-pointer"
+        onClick={onToggle}
+      >
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
+            <Icons.Image />
+          </div>
+          <div>
+            <p className="font-medium">{file.filename}</p>
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              {file.size && <span>{formatSize(file.size)}</span>}
+              {hasDestinations && (
+                <>
+                  <span>•</span>
+                  <span className="text-green-400">{successCount} sent</span>
+                  {failCount > 0 && (
+                    <span className="text-red-400">{failCount} failed</span>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
         </div>
-        <div>
-          <p className="font-medium">{filename}</p>
-          <p className="text-sm text-gray-400">→ {log.destination}</p>
+        <div className="flex items-center gap-3">
+          <div className="text-right">
+            <p className="text-sm text-gray-400">{timeAgo}</p>
+            <p className="text-xs text-gray-500">{date.toLocaleString()}</p>
+          </div>
+          <svg
+            className={`w-4 h-4 text-gray-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
         </div>
       </div>
-      <div className="text-right">
-        <p className="text-sm text-gray-400">{timeAgo}</p>
-        <p className="text-xs text-gray-500">{date.toLocaleString()}</p>
+
+      {expanded && hasDestinations && (
+        <div className="border-t border-gray-600/50 p-4 bg-gray-800/30 space-y-2">
+          <p className="text-xs text-gray-500 uppercase tracking-wide mb-2">Destinations</p>
+          {destinations.map((dest, i) => (
+            <div key={i} className="flex items-center justify-between p-2 bg-gray-700/30 rounded">
+              <div className="flex items-center gap-2">
+                <div className={`p-1 rounded ${dest.success ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
+                  {dest.success ? <Icons.Check /> : <Icons.X />}
+                </div>
+                <span className="text-sm">{dest.destination}</span>
+              </div>
+              <div className="text-right text-xs text-gray-500">
+                {dest.duration && <span>{dest.duration}ms</span>}
+                {dest.error && <span className="text-red-400 ml-2">{dest.error}</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Active Upload Indicator
+function ActiveUploadIndicator({ uploads }) {
+  const allUploads = Object.entries(uploads).flatMap(([dest, files]) =>
+    files.map((f) => ({ ...f, destination: dest }))
+  )
+
+  if (allUploads.length === 0) return null
+
+  return (
+    <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="animate-spin h-4 w-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
+        <span className="text-sm text-blue-400 font-medium">
+          {allUploads.length} upload{allUploads.length !== 1 ? 's' : ''} in progress
+        </span>
+      </div>
+      <div className="space-y-1">
+        {allUploads.map((upload) => (
+          <div key={upload.id} className="flex items-center justify-between text-xs">
+            <span className="text-gray-300">{upload.filename}</span>
+            <span className="text-gray-500">→ {upload.destination}</span>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -458,7 +542,7 @@ function Tabs({ tabs, activeTab, onChange }) {
 function App() {
   const [activeTab, setActiveTab] = useState('status')
   const [status, setStatus] = useState(null)
-  const [logs, setLogs] = useState([])
+  const [receivedFiles, setReceivedFiles] = useState([])
   const [authStatus, setAuthStatus] = useState(null)
   const [destinations, setDestinations] = useState([])
   const [settings, setSettings] = useState(null)
@@ -466,13 +550,26 @@ function App() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
   const [successMessage, setSuccessMessage] = useState(null)
+  const [expandedFiles, setExpandedFiles] = useState(new Set())
+
+  const toggleFileExpanded = (id) => {
+    setExpandedFiles((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
 
   const fetchData = useCallback(async (includeSettings = false) => {
     try {
       setError(null)
       const fetches = [
         fetch('/api/status'),
-        fetch('/api/logs?limit=50'),
+        fetch('/api/logs/received?limit=50'),
         fetch('/api/auth/google/status'),
         fetch('/api/destinations'),
       ]
@@ -480,13 +577,13 @@ function App() {
         fetches.push(fetch('/api/settings'))
       }
 
-      const [statusRes, logsRes, authRes, destRes, settingsRes] =
+      const [statusRes, receivedRes, authRes, destRes, settingsRes] =
         await Promise.all(fetches)
 
       if (!statusRes.ok) throw new Error('Failed to fetch status')
 
       setStatus(await statusRes.json())
-      setLogs(await logsRes.json())
+      setReceivedFiles(await receivedRes.json())
       setAuthStatus(await authRes.json())
       setDestinations(await destRes.json())
       if (settingsRes) {
@@ -561,7 +658,7 @@ function App() {
 
   const tabs = [
     { id: 'status', label: 'Status' },
-    { id: 'logs', label: 'Upload Logs' },
+    { id: 'logs', label: 'Files' },
     { id: 'settings', label: 'Settings' },
     { id: 'auth', label: 'Google Auth' },
   ]
@@ -622,11 +719,21 @@ function App() {
         {/* Tab Content */}
         {activeTab === 'status' && (
           <div className="space-y-8">
+            {/* Active Uploads */}
+            {status?.activeUploads && Object.keys(status.activeUploads).length > 0 && (
+              <ActiveUploadIndicator uploads={status.activeUploads} />
+            )}
+
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <StatsCard
+                title="Files Received"
+                value={receivedFiles.length || 0}
+                icon={Icons.Image}
+              />
               <StatsCard
                 title="Total Uploads"
-                value={status?.stats?.totalUploads || logs.length || 0}
+                value={status?.stats?.totalUploads || 0}
                 icon={Icons.Upload}
               />
               <StatsCard
@@ -679,16 +786,21 @@ function App() {
               </div>
             </Card>
 
-            {/* Recent Uploads */}
+            {/* Recent Received Files */}
             <Card>
-              <h2 className="text-lg font-semibold mb-4">Recent Uploads</h2>
+              <h2 className="text-lg font-semibold mb-4">Recently Received Files</h2>
               <div className="space-y-3">
-                {logs.slice(0, 5).map((log, i) => (
-                  <LogEntry key={i} log={log} />
+                {receivedFiles.slice(0, 5).map((file) => (
+                  <ReceivedFileEntry
+                    key={file.id}
+                    file={file}
+                    expanded={expandedFiles.has(file.id)}
+                    onToggle={() => toggleFileExpanded(file.id)}
+                  />
                 ))}
-                {logs.length === 0 && (
+                {receivedFiles.length === 0 && (
                   <p className="text-gray-400 text-center py-4">
-                    No uploads yet
+                    No files received yet
                   </p>
                 )}
               </div>
@@ -699,18 +811,29 @@ function App() {
         {activeTab === 'logs' && (
           <Card>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold">Upload Logs</h2>
+              <h2 className="text-lg font-semibold">Received Files</h2>
               <span className="text-sm text-gray-400">
-                {logs.length} entries
+                {receivedFiles.length} files received
               </span>
             </div>
+
+            {/* Active Uploads */}
+            {status?.activeUploads && Object.keys(status.activeUploads).length > 0 && (
+              <ActiveUploadIndicator uploads={status.activeUploads} />
+            )}
+
             <div className="space-y-3 max-h-[600px] overflow-y-auto">
-              {logs.map((log, i) => (
-                <LogEntry key={i} log={log} />
+              {receivedFiles.map((file) => (
+                <ReceivedFileEntry
+                  key={file.id}
+                  file={file}
+                  expanded={expandedFiles.has(file.id)}
+                  onToggle={() => toggleFileExpanded(file.id)}
+                />
               ))}
-              {logs.length === 0 && (
+              {receivedFiles.length === 0 && (
                 <p className="text-gray-400 text-center py-8">
-                  No upload logs available
+                  No files received yet
                 </p>
               )}
             </div>

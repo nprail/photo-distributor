@@ -147,11 +147,9 @@ async function startServer() {
     await ftpServer.listen()
     console.log(`\n📷 Photo Distributor started!`)
     console.log(`   FTP URL: ftp://${config.ftpHost}:${config.ftpPort}`)
-    console.log(`   Photos directory: ${config.photosDir}`)
     console.log(`\n   Supported formats:`)
     console.log(`   - Photos: ${PHOTO_EXTENSIONS.join(', ')}`)
     console.log(`   - Videos: ${VIDEO_EXTENSIONS.join(', ')}`)
-    console.log(`\n   Files will be organized as: photos/<yyyy>/<yyyy-mm-dd>/`)
 
     // Start web dashboard
     await startWebServer()

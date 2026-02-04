@@ -119,10 +119,6 @@ Upload files directly to Google Photos with automatic album organization.
     "username": "anonymous",
     "password": "anonymous"
   },
-  "directories": {
-    "photosDir": "./photos",
-    "logDir": "./logs"
-  },
   "deleteAfterUpload": true,
   "destinations": {
     "local": {

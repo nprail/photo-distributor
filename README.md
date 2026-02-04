@@ -76,10 +76,12 @@ These settings require a server restart to take effect. You can set them directl
 
 | Variable   | Default   | Description                                                                |
 | ---------- | --------- | -------------------------------------------------------------------------- |
-| `FTP_PORT` | `21`      | FTP server port. Use 2121+ to avoid requiring root privileges              |
-| `FTP_HOST` | `0.0.0.0` | Host address to bind to. Use `0.0.0.0` for all interfaces or a specific IP |
-| `PASV_URL` | `0.0.0.0` | Public IP for passive mode connections (important for remote clients)      |
-| `WEB_PORT` | `3001`    | Port for the web dashboard                                                 |
+| `FTP_PORT`   | `21`      | FTP server port. Use 2121+ to avoid requiring root privileges              |
+| `FTP_HOST`   | `0.0.0.0` | Host address to bind to. Use `0.0.0.0` for all interfaces or a specific IP |
+| `PASV_URL`   | `0.0.0.0` | Public IP for passive mode connections (important for remote clients)      |
+| `WEB_PORT`   | `3001`    | Port for the web dashboard                                                 |
+| `UPLOAD_DIR` | `/tmp/ftp-uploads` (or OS temp dir) | Directory for temporary file uploads before processing. Must be writable. |
+| `LOG_DIR`    | `./logs`  | Directory for server logs and upload logs. Must be writable.               |
 
 ### Web Dashboard Settings
 

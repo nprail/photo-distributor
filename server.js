@@ -33,7 +33,9 @@ export async function setupDestinations() {
 
   // Register local destination
   if (settings.destinations.local.enabled) {
-    destinationManager.register(new LocalDestination(settings.destinations.local))
+    destinationManager.register(
+      new LocalDestination(settings.destinations.local),
+    )
   }
 
   // Register Google Drive destination
@@ -71,9 +73,8 @@ async function startServer() {
   await settings.reload()
   console.log('📋 Settings loaded from config/settings.json')
 
-  await fs.mkdir(settings.photosDir, { recursive: true })
-  await fs.mkdir(settings.uploadDir, { recursive: true })
-  await fs.mkdir(settings.logDir, { recursive: true })
+  await fs.mkdir(config.uploadDir, { recursive: true })
+  await fs.mkdir(config.logDir, { recursive: true })
 
   // Setup upload destinations
   await setupDestinations()
@@ -102,7 +103,7 @@ async function startServer() {
         // Check credentials - compare password with bcrypt if it looks like a hash, otherwise direct compare
         const storedPassword = settings.ftpPassword
         let passwordMatches = false
-        
+
         if (storedPassword.startsWith('$2')) {
           // Password is bcrypt hashed
           passwordMatches = await bcrypt.compare(password, storedPassword)

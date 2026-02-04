@@ -1,6 +1,8 @@
 // Environment variable based configuration
 // These settings require a server restart to change
 import 'dotenv/config'
+import path from 'path'
+import os from 'os'
 
 const config = {
   // FTP Server Settings
@@ -10,6 +12,10 @@ const config = {
 
   // Web Dashboard Settings
   webPort: parseInt(process.env.WEB_PORT, 10) || 3001,
+
+  // Directory Settings
+  uploadDir: process.env.UPLOAD_DIR || path.join(os.tmpdir(), 'ftp-uploads'),
+  logDir: process.env.LOG_DIR || path.join(process.cwd(), 'logs'),
 }
 
 export default config

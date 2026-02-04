@@ -656,7 +656,14 @@ function Tabs({ tabs, activeTab, onChange }) {
 
 // Main App Component
 function App() {
-  const [activeTab, setActiveTab] = useState('status')
+  // Get initial tab from URL hash or default to 'status'
+  const getInitialTab = () => {
+    const hash = window.location.hash.slice(1) // Remove '#'
+    const validTabs = ['status', 'logs', 'destinations', 'settings']
+    return validTabs.includes(hash) ? hash : 'status'
+  }
+
+  const [activeTab, setActiveTab] = useState(getInitialTab())
   const [status, setStatus] = useState(null)
   const [receivedFiles, setReceivedFiles] = useState([])
   const [authStatus, setAuthStatus] = useState(null)
@@ -680,11 +687,20 @@ function App() {
     })
   }
 
+  const fetchStatus = useCallback(async () => {
+    try {
+      const statusRes = await fetch('/api/status')
+      if (!statusRes.ok) throw new Error('Failed to fetch status')
+      setStatus(await statusRes.json())
+    } catch (err) {
+      setError(err.message)
+    }
+  }, [])
+
   const fetchData = useCallback(async (includeSettings = false) => {
     try {
       setError(null)
       const fetches = [
-        fetch('/api/status'),
         fetch('/api/logs/received?limit=50'),
         fetch('/api/auth/google/status'),
         fetch('/api/destinations'),
@@ -693,12 +709,9 @@ function App() {
         fetches.push(fetch('/api/settings'))
       }
 
-      const [statusRes, receivedRes, authRes, destRes, settingsRes] =
+      const [receivedRes, authRes, destRes, settingsRes] =
         await Promise.all(fetches)
 
-      if (!statusRes.ok) throw new Error('Failed to fetch status')
-
-      setStatus(await statusRes.json())
       setReceivedFiles(await receivedRes.json())
       setAuthStatus(await authRes.json())
       setDestinations(await destRes.json())
@@ -713,10 +726,35 @@ function App() {
   }, [])
 
   useEffect(() => {
+    fetchStatus() // Initial status fetch
     fetchData(true) // Include settings on initial load
-    const interval = setInterval(() => fetchData(false), 5000) // Don't refresh settings on interval
-    return () => clearInterval(interval)
-  }, [fetchData])
+    const statusInterval = setInterval(() => fetchStatus(), 1000) // Fetch status every second
+    const dataInterval = setInterval(() => fetchData(false), 5000) // Fetch other data every 5 seconds
+    return () => {
+      clearInterval(statusInterval)
+      clearInterval(dataInterval)
+    }
+  }, [fetchStatus, fetchData])
+
+  // Handle URL hash changes (browser back/forward)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1)
+      const validTabs = ['status', 'logs', 'destinations', 'settings']
+      if (validTabs.includes(hash)) {
+        setActiveTab(hash)
+      }
+    }
+
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [])
+
+  // Update URL hash when tab changes
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId)
+    window.location.hash = tabId
+  }
 
   const handleGoogleConnect = async (service) => {
     try {
@@ -880,7 +918,7 @@ function App() {
 
         {/* Tabs */}
         <div className="mb-8">
-          <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+          <Tabs tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
         </div>
 
         {/* Tab Content */}

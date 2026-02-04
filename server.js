@@ -100,17 +100,11 @@ async function startServer() {
         // Reload settings to get latest credentials (allows live updates)
         await settings.reload()
 
-        // Check credentials - compare password with bcrypt if it looks like a hash, otherwise direct compare
-        const storedPassword = settings.ftpPassword
-        let passwordMatches = false
-
-        if (storedPassword.startsWith('$2')) {
-          // Password is bcrypt hashed
-          passwordMatches = await bcrypt.compare(password, storedPassword)
-        } else {
-          // Password is plain text
-          passwordMatches = password === storedPassword
-        }
+        // Check credentials
+        const passwordMatches = await bcrypt.compare(
+          password,
+          settings.ftpPasswordHash,
+        )
 
         if (username === settings.ftpUsername && passwordMatches) {
           console.log(`✅ User ${username} authenticated successfully`)

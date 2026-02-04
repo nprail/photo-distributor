@@ -1,7 +1,7 @@
 {
-  "name": "photos-ftp-uploader",
+  "name": "photo-distributor",
   "version": "1.0.0",
-  "description": "FTP server that organizes photos and videos by date",
+  "description": "An FTP server that distributes photos to one or more destinations.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -25,7 +25,15 @@
     "nodemon": "^3.1.11"
   },
   "nodemonConfig": {
-    "ignore": ["config/*"],
-    "watch": [".env", "*.js", "lib/*", "server.js", "package.json"]
+    "ignore": [
+      "config/*"
+    ],
+    "watch": [
+      ".env",
+      "*.js",
+      "lib/*",
+      "server.js",
+      "package.json"
+    ]
   }
 }

@@ -86,7 +86,7 @@ async function startServer() {
     pasv_min: 1024,
     pasv_max: 1048,
     greeting: [
-      'Welcome to Photos FTP Server',
+      'Welcome to Photo Distributor',
       'Files will be organized by date automatically',
     ],
   })
@@ -145,7 +145,7 @@ async function startServer() {
 
   try {
     await ftpServer.listen()
-    console.log(`\n📷 Photos FTP Server started!`)
+    console.log(`\n📷 Photo Distributor started!`)
     console.log(`   FTP URL: ftp://${config.ftpHost}:${config.ftpPort}`)
     console.log(`   Photos directory: ${config.photosDir}`)
     console.log(`\n   Supported formats:`)

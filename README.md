@@ -1,16 +1,18 @@
-# Photos FTP Uploader
+# Photo Distributor
 
-An FTP server that automatically organizes uploaded photos and videos into date-based folders by extracting metadata from the files.
+An FTP server that distributes photos to one or more destinations.
+
+This service was originally built as an FTP endpoint for Canon cameras to automatically upload media to multiple locations including a NAS and Google Photos.
 
 ## Features
 
-- **Automatic Organization**: Files are automatically moved to `photos/<yyyy>/<yyyy-mm-dd>/` based on their capture date
+- **Multiple Destinations**: Upload to local storage, Google Drive, and Google Photos simultaneously
+- **Automatic Organization**: Files are automatically moved to `<destination-folder>/<yyyy>/<yyyy-mm-dd>/` based on their capture date
 - **EXIF Metadata Extraction**: Reads capture date from photo EXIF data for accurate organization
 - **Multiple Format Support**: Handles common photo and video formats including RAW files
 - **Duplicate Handling**: Automatically renames files if a file with the same name already exists
 - **FTP Authentication**: Supports both anonymous access and username/password authentication
 - **Web Dashboard**: Built-in React-based dashboard for monitoring transfers and managing Google authentication
-- **Multiple Destinations**: Upload to local storage, Google Drive, and Google Photos simultaneously
 
 ## Supported File Formats
 
@@ -48,21 +50,6 @@ FTP_PORT=2121 npm start
 FTP_PORT=2121 PHOTOS_DIR=/path/to/photos npm start
 ```
 
-### Connecting to the Server
-
-Use any FTP client to connect:
-
-```bash
-# Command line FTP
-ftp localhost 2121
-
-# Or use GUI clients like FileZilla, Cyberduck, etc.
-# Host: localhost (or your server IP)
-# Port: 2121 (or your configured port)
-# Username: anonymous (default)
-# Password: anonymous (default)
-```
-
 ## Configuration
 
 The server uses two types of configuration:
@@ -74,14 +61,14 @@ The server uses two types of configuration:
 
 These settings require a server restart to take effect. You can set them directly or use a `.env` file.
 
-| Variable   | Default   | Description                                                                |
-| ---------- | --------- | -------------------------------------------------------------------------- |
-| `FTP_PORT`   | `21`      | FTP server port. Use 2121+ to avoid requiring root privileges              |
-| `FTP_HOST`   | `0.0.0.0` | Host address to bind to. Use `0.0.0.0` for all interfaces or a specific IP |
-| `PASV_URL`   | `0.0.0.0` | Public IP for passive mode connections (important for remote clients)      |
-| `WEB_PORT`   | `3001`    | Port for the web dashboard                                                 |
-| `UPLOAD_DIR` | `/tmp/ftp-uploads` (or OS temp dir) | Directory for temporary file uploads before processing. Must be writable. |
-| `LOG_DIR`    | `./logs`  | Directory for server logs and upload logs. Must be writable.               |
+| Variable     | Default                             | Description                                                                |
+| ------------ | ----------------------------------- | -------------------------------------------------------------------------- |
+| `FTP_PORT`   | `21`                                | FTP server port. Use 2121+ to avoid requiring root privileges              |
+| `FTP_HOST`   | `0.0.0.0`                           | Host address to bind to. Use `0.0.0.0` for all interfaces or a specific IP |
+| `PASV_URL`   | `0.0.0.0`                           | Public IP for passive mode connections (important for remote clients)      |
+| `WEB_PORT`   | `3001`                              | Port for the web dashboard                                                 |
+| `UPLOAD_DIR` | `/tmp/ftp-uploads` (or OS temp dir) | Directory for temporary file uploads before processing. Must be writable.  |
+| `LOG_DIR`    | `./logs`                            | Directory for server logs and upload logs. Must be writable.               |
 
 ### Web Dashboard Settings
 
@@ -131,7 +118,7 @@ All destination settings are configured through the web dashboard at `http://loc
 
 ### Google OAuth Setup
 
-Google Drive and Google Photos authentication is managed through the web dashboard. Navigate to the Google Auth tab and follow the prompts to connect your Google account.
+Google Drive and Google Photos authentication is managed through the web dashboard. Navigate to the Destinations tab and follow the prompts to connect your Google account.
 
 See [docs/DESTINATIONS.md](docs/DESTINATIONS.md) for detailed setup instructions.
 

@@ -1,6 +1,6 @@
 # Destinations Configuration
 
-This document explains how to configure different upload destinations for the Photos FTP Uploader.
+This document explains how to configure different upload destinations for Photo Distributor.
 
 ## Overview
 
@@ -34,7 +34,7 @@ Upload files to Google Drive with automatic folder organization.
 2. Enable the **Google Drive API**
 3. Create OAuth 2.0 credentials (Desktop app type)
 4. Download the credentials JSON file to `config/google-drive-credentials.json`
-5. Open the web dashboard and go to the Google Auth tab
+5. Open the web dashboard and go to the Destinations tab
 6. Click "Connect" next to Google Drive and authorize access
 7. Enable Google Drive in the Settings tab
 
@@ -52,7 +52,7 @@ Upload files directly to Google Photos with automatic album organization.
 2. Enable the **Photos Library API**
 3. Create OAuth 2.0 credentials (Desktop app type)
 4. Download the credentials JSON file to `config/google-photos-credentials.json`
-5. Open the web dashboard and go to the Google Auth tab
+5. Open the web dashboard and go to the Destinations tab
 6. Click "Connect" next to Google Photos and authorize access
 7. Enable Google Photos in the Settings tab
 

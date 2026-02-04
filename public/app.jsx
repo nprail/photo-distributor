@@ -669,7 +669,7 @@ function App() {
                 <Icons.Camera />
               </div>
               <div>
-                <h1 className="text-xl font-bold">Photos FTP Uploader</h1>
+                <h1 className="text-xl font-bold">Photo Distributor</h1>
                 <p className="text-sm text-gray-400">Dashboard</p>
               </div>
             </div>
@@ -1124,7 +1124,7 @@ function App() {
       {/* Footer */}
       <footer className="border-t border-gray-800 mt-12">
         <div className="max-w-7xl mx-auto px-6 py-4 text-center text-sm text-gray-500">
-          Photos FTP Uploader Dashboard
+          Photo Distributor
         </div>
       </footer>
     </div>

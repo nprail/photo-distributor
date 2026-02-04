@@ -116,64 +116,15 @@ Multiple destinations can be enabled simultaneously to upload files to all of th
 
 All destination settings are configured through the web dashboard at `http://localhost:3001` under the Settings tab.
 
-### Google OAuth Setup
-
-Google Drive and Google Photos authentication is managed through the web dashboard. Navigate to the Destinations tab and follow the prompts to connect your Google account.
-
-See [docs/DESTINATIONS.md](docs/DESTINATIONS.md) for detailed setup instructions.
+See [docs/DESTINATIONS.md](docs/DESTINATIONS.md) for detailed destination configuration, file organization, and setup instructions.
 
 ## Behavior
-
-### Date Extraction Priority
-
-For photos, the server attempts to extract the capture date from EXIF metadata in the following order:
-
-1. `DateTimeOriginal` - When the photo was originally taken
-2. `CreateDate` - When the digital file was created
-3. `DateTimeDigitized` - When the image was digitized
-4. `DateTime` - General date/time tag
-5. `GPSDateStamp` - Date from GPS data
-
-If no EXIF date is found (or for video files), the server falls back to:
-
-- File birth time (creation date)
-- File modification time
-
-### File Organization
-
-Files are organized into the following structure:
-
-```
-photos/
-├── 2024/
-│   ├── 2024-01-15/
-│   │   ├── IMG_001.jpg
-│   │   └── IMG_002.cr2
-│   └── 2024-03-22/
-│       └── vacation.mp4
-└── 2025/
-    └── 2025-12-25/
-        ├── christmas.heic
-        └── christmas_1.heic  # Renamed duplicate
-```
-
-### Duplicate File Handling
-
-When a file with the same name already exists in the destination folder:
-
-- The new file is renamed with a numeric suffix: `filename_1.jpg`, `filename_2.jpg`, etc.
-- Original file extension is preserved
-- Counter increments until a unique name is found
 
 ### Unsupported Files
 
 Files with unsupported extensions are logged and discarded. They are not moved to the photos directory.
 
 ## Technical Details
-
-### Temporary Upload Directory
-
-Uploaded files are first stored in a temporary directory (`/tmp/ftp-uploads` or OS equivalent) before being processed and moved to their final destination. This ensures atomic file operations.
 
 ### Passive Mode
 

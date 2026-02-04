@@ -12,6 +12,9 @@ const config = {
   ftpUsername: process.env.FTP_USERNAME || 'anonymous',
   ftpPassword: process.env.FTP_PASSWORD || 'anonymous',
 
+  // Web Dashboard Settings
+  webPort: process.env.WEB_PORT || 3001,
+
   // Directory Settings
   photosDir: process.env.PHOTOS_DIR || path.join(process.cwd(), 'photos'),
   uploadDir: process.env.UPLOAD_DIR || path.join(os.tmpdir(), 'ftp-uploads'),

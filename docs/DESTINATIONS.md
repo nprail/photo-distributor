@@ -13,6 +13,7 @@ The modular destination system allows you to upload files to multiple destinatio
 Files are organized into date-based folders on your local filesystem.
 
 **Configuration:**
+
 ```bash
 DESTINATION_LOCAL_ENABLED=true  # Default: true
 PHOTOS_DIR=/path/to/photos       # Default: ./photos
@@ -23,6 +24,7 @@ PHOTOS_DIR=/path/to/photos       # Default: ./photos
 Upload files to Google Drive with automatic folder organization.
 
 **Configuration:**
+
 ```bash
 DESTINATION_GOOGLE_DRIVE_ENABLED=true
 GOOGLE_DRIVE_CREDENTIALS=/path/to/credentials.json
@@ -36,11 +38,8 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID=optional_folder_id
 2. Enable the **Google Drive API**
 3. Create OAuth 2.0 credentials (Desktop app type)
 4. Download the credentials JSON file to `config/google-drive-credentials.json`
-5. Run the setup script:
-   ```bash
-   npm run setup:google-drive -- --credentials config/google-drive-credentials.json
-   ```
-6. Follow the browser prompts to authenticate
+5. Open the web dashboard in your browser
+6. Go to the Destinations section and follow the prompts to connect your Google account
 7. Set the environment variables above
 
 ### 3. Google Photos
@@ -48,6 +47,7 @@ GOOGLE_DRIVE_ROOT_FOLDER_ID=optional_folder_id
 Upload files directly to Google Photos with automatic album organization.
 
 **Configuration:**
+
 ```bash
 DESTINATION_GOOGLE_PHOTOS_ENABLED=true
 GOOGLE_PHOTOS_CREDENTIALS=/path/to/credentials.json
@@ -60,11 +60,8 @@ GOOGLE_PHOTOS_TOKEN=/path/to/token.json
 2. Enable the **Photos Library API**
 3. Create OAuth 2.0 credentials (Desktop app type)
 4. Download the credentials JSON file to `config/google-photos-credentials.json`
-5. Run the setup script:
-   ```bash
-   npm run setup:google-photos -- --credentials config/google-photos-credentials.json
-   ```
-6. Follow the browser prompts to authenticate
+5. Open the web dashboard in your browser
+6. Go to the Destinations section and follow the prompts to connect your Google account
 7. Set the environment variables above
 
 ## Example .env File
@@ -103,6 +100,7 @@ To add a new destination:
 4. Add configuration options to `config.js`
 
 Example:
+
 ```javascript
 import { BaseDestination } from './base.js'
 

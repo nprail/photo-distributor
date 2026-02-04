@@ -11,6 +11,7 @@ import {
   GoogleDriveDestination,
   GooglePhotosDestination,
 } from './lib/destinations/index.js'
+import { startWebServer } from './lib/web-server.js'
 
 const VIDEO_EXTENSIONS = [
   '.mp4',
@@ -131,6 +132,10 @@ async function startServer() {
     console.log(`   - Photos: ${PHOTO_EXTENSIONS.join(', ')}`)
     console.log(`   - Videos: ${VIDEO_EXTENSIONS.join(', ')}`)
     console.log(`\n   Files will be organized as: photos/<yyyy>/<yyyy-mm-dd>/`)
+
+    // Start web dashboard
+    await startWebServer()
+
     console.log(`\n   Waiting for connections...`)
   } catch (error) {
     console.error(`Failed to start server: ${error.message}`)

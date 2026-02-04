@@ -9,10 +9,13 @@ An FTP server that automatically organizes uploaded photos and videos into date-
 - **Multiple Format Support**: Handles common photo and video formats including RAW files
 - **Duplicate Handling**: Automatically renames files if a file with the same name already exists
 - **FTP Authentication**: Supports both anonymous access and username/password authentication
+- **Web Dashboard**: Built-in React-based dashboard for monitoring transfers and managing Google authentication
+- **Multiple Destinations**: Upload to local storage, Google Drive, and Google Photos simultaneously
 
 ## Supported File Formats
 
 ### Photos
+
 - JPEG: `.jpg`, `.jpeg`
 - PNG: `.png`
 - HEIF: `.heic`, `.heif`
@@ -21,6 +24,7 @@ An FTP server that automatically organizes uploaded photos and videos into date-
 - Canon RAW: `.cr2`, `.cr3`
 
 ### Videos
+
 - `.mp4`, `.mov`, `.avi`, `.mkv`, `.m4v`, `.3gp`, `.wmv`
 
 ## Installation
@@ -65,66 +69,78 @@ The server is configured using environment variables. You can create a `.env` fi
 
 ### FTP Server Configuration
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `FTP_PORT` | `21` | FTP server port. Use 2121+ to avoid requiring root privileges |
-| `FTP_HOST` | `0.0.0.0` | Host address to bind to. Use `0.0.0.0` for all interfaces or a specific IP |
-| `PASV_URL` | `0.0.0.0` | Public IP for passive mode connections (important for remote clients) |
-| `FTP_USERNAME` | `anonymous` | Username for FTP authentication |
-| `FTP_PASSWORD` | `anonymous` | Password for FTP authentication |
+| Variable       | Default     | Description                                                                |
+| -------------- | ----------- | -------------------------------------------------------------------------- |
+| `FTP_PORT`     | `21`        | FTP server port. Use 2121+ to avoid requiring root privileges              |
+| `FTP_HOST`     | `0.0.0.0`   | Host address to bind to. Use `0.0.0.0` for all interfaces or a specific IP |
+| `PASV_URL`     | `0.0.0.0`   | Public IP for passive mode connections (important for remote clients)      |
+| `FTP_USERNAME` | `anonymous` | Username for FTP authentication                                            |
+| `FTP_PASSWORD` | `anonymous` | Password for FTP authentication                                            |
 
 ### Directory Configuration
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `PHOTOS_DIR` | `./photos` | Directory where organized photos will be stored |
+| Variable     | Default         | Description                                           |
+| ------------ | --------------- | ----------------------------------------------------- |
+| `PHOTOS_DIR` | `./photos`      | Directory where organized photos will be stored       |
 | `UPLOAD_DIR` | System temp dir | Temporary directory for FTP uploads during processing |
-| `LOG_DIR` | `./logs` | Directory where upload logs will be stored |
+| `LOG_DIR`    | `./logs`        | Directory where upload logs will be stored            |
 
 ### Destination Configuration
 
 Each destination can be independently enabled or disabled:
 
 #### Local Filesystem
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DESTINATION_LOCAL_ENABLED` | `true` | Enable/disable local filesystem destination |
-| `PHOTOS_DIR` | `./photos` | Where to store organized photos locally |
+
+| Variable                    | Default    | Description                                 |
+| --------------------------- | ---------- | ------------------------------------------- |
+| `DESTINATION_LOCAL_ENABLED` | `true`     | Enable/disable local filesystem destination |
+| `PHOTOS_DIR`                | `./photos` | Where to store organized photos locally     |
 
 #### Google Drive
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DESTINATION_GOOGLE_DRIVE_ENABLED` | `false` | Enable/disable Google Drive uploads |
-| `GOOGLE_DRIVE_CREDENTIALS` | `./config/google-drive-credentials.json` | Path to Google Drive credentials file |
-| `GOOGLE_DRIVE_TOKEN` | `./config/google-drive-token.json` | Path to Google Drive token file |
-| `GOOGLE_DRIVE_ROOT_FOLDER_ID` | (none) | Optional: Root folder ID in Google Drive for uploads |
+
+| Variable                           | Default                                  | Description                                          |
+| ---------------------------------- | ---------------------------------------- | ---------------------------------------------------- |
+| `DESTINATION_GOOGLE_DRIVE_ENABLED` | `false`                                  | Enable/disable Google Drive uploads                  |
+| `GOOGLE_DRIVE_CREDENTIALS`         | `./config/google-drive-credentials.json` | Path to Google Drive credentials file                |
+| `GOOGLE_DRIVE_TOKEN`               | `./config/google-drive-token.json`       | Path to Google Drive token file                      |
+| `GOOGLE_DRIVE_ROOT_FOLDER_ID`      | (none)                                   | Optional: Root folder ID in Google Drive for uploads |
 
 #### Google Photos
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DESTINATION_GOOGLE_PHOTOS_ENABLED` | `false` | Enable/disable Google Photos uploads |
-| `GOOGLE_PHOTOS_CREDENTIALS` | `./config/google-photos-credentials.json` | Path to Google Photos credentials file |
-| `GOOGLE_PHOTOS_TOKEN` | `./config/google-photos-token.json` | Path to Google Photos token file |
+
+| Variable                            | Default                                   | Description                            |
+| ----------------------------------- | ----------------------------------------- | -------------------------------------- |
+| `DESTINATION_GOOGLE_PHOTOS_ENABLED` | `false`                                   | Enable/disable Google Photos uploads   |
+| `GOOGLE_PHOTOS_CREDENTIALS`         | `./config/google-photos-credentials.json` | Path to Google Photos credentials file |
+| `GOOGLE_PHOTOS_TOKEN`               | `./config/google-photos-token.json`       | Path to Google Photos token file       |
+
+### Web Dashboard Configuration
+
+| Variable   | Default | Description                |
+| ---------- | ------- | -------------------------- |
+| `WEB_PORT` | `3001`  | Port for the web dashboard |
 
 ### General Options
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `DELETE_AFTER_UPLOAD` | `true` | Delete source file after successful upload to all destinations |
+| Variable              | Default | Description                                                    |
+| --------------------- | ------- | -------------------------------------------------------------- |
+| `DELETE_AFTER_UPLOAD` | `true`  | Delete source file after successful upload to all destinations |
 
 ### Example Configurations
 
 **Local development:**
+
 ```bash
 FTP_PORT=2121 npm start
 ```
 
 **Network accessible (LAN):**
+
 ```bash
 FTP_PORT=2121 FTP_HOST=0.0.0.0 PASV_URL=192.168.1.100 npm start
 ```
 
 **With Google Drive and local storage:**
+
 ```bash
 FTP_PORT=2121 \
 DESTINATION_LOCAL_ENABLED=true \
@@ -135,6 +151,7 @@ npm start
 ```
 
 **Sample .env file:**
+
 ```env
 FTP_PORT=2121
 FTP_HOST=0.0.0.0
@@ -164,7 +181,11 @@ Files are automatically uploaded to configured destinations, each organizing the
 
 Multiple destinations can be enabled simultaneously to upload files to all of them.
 
-See [docs/DESTINATIONS.md](docs/DESTINATIONS.md) for detailed setup instructions and configuration options.
+### Google OAuth Setup
+
+Google Drive and Google Photos authentication is managed through the built-in web dashboard. Open the dashboard in your browser, navigate to the Destinations section, and follow the prompts to connect your Google account.
+
+See [docs/DESTINATIONS.md](docs/DESTINATIONS.md) for setup instructions and configuration options.
 
 ## Behavior
 
@@ -179,6 +200,7 @@ For photos, the server attempts to extract the capture date from EXIF metadata i
 5. `GPSDateStamp` - Date from GPS data
 
 If no EXIF date is found (or for video files), the server falls back to:
+
 - File birth time (creation date)
 - File modification time
 
@@ -203,6 +225,7 @@ photos/
 ### Duplicate File Handling
 
 When a file with the same name already exists in the destination folder:
+
 - The new file is renamed with a numeric suffix: `filename_1.jpg`, `filename_2.jpg`, etc.
 - Original file extension is preserved
 - Counter increments until a unique name is found
@@ -226,6 +249,7 @@ The server uses passive mode ports 1024-1048 for data connections. This range ca
 ### "Port requires elevated privileges"
 
 Ports below 1024 (including default FTP port 21) require root/administrator access. Solution:
+
 ```bash
 FTP_PORT=2121 npm start
 ```
@@ -239,6 +263,7 @@ FTP_PORT=2121 npm start
 ### Cannot connect from other devices
 
 Ensure the server is binding to all interfaces and the passive URL is correct:
+
 ```bash
 FTP_HOST=0.0.0.0 PASV_URL=<your-local-ip> FTP_PORT=2121 npm start
 ```

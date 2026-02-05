@@ -1,0 +1,37 @@
+services:
+  photo-distributor:
+    build: .
+    image: photo-distributor:latest
+    container_name: photo-distributor
+    restart: unless-stopped
+    
+    ports:
+      # FTP command port (2121 avoids permission issues)
+      - "2121:2121"
+      # FTP passive mode ports
+      - "1024-1048:1024-1048"
+      # Web dashboard
+      - "3001:3001"
+    
+    # Configuration from .env file
+    # Copy .env.example to .env and customize your settings
+    env_file: .env
+    
+    # Additional/override environment variables can be specified here
+    # environment:
+    #   - TZ=America/New_York
+    
+    volumes:
+      # Data directory (config, logs, temp)
+      - ./data:/app/data
+      
+      # Photos destination directory
+      # Maps PHOTOS_DIR from .env to /data/photos inside container
+      - ${PHOTOS_DIR:-./photos}:/data/photos
+    
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s

@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+
+# Git
+.git
+.gitignore
+
+# Development files
+.env
+.env.local
+.env.*.local
+
+# Runtime data (we'll mount these)
+data/
+photos/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Documentation (not needed in container)
+*.md
+!README.md
+docs/
+
+# Docker files (prevent recursive builds)
+Dockerfile
+docker-compose*.yml
+.dockerignore

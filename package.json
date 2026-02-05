@@ -28,7 +28,7 @@
   },
   "nodemonConfig": {
     "ignore": [
-      "config/*"
+      "data/*"
     ],
     "watch": [
       ".env",

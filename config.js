@@ -2,11 +2,12 @@
 // These settings require a server restart to change
 import 'dotenv/config'
 import path from 'path'
-import os from 'os'
+
+const dataDir = process.env.DATA_DIR || path.join(process.cwd(), 'data')
 
 const config = {
   // FTP Server Settings
-  ftpPort: parseInt(process.env.FTP_PORT, 10) || 21,
+  ftpPort: parseInt(process.env.FTP_PORT, 10) || 2121,
   ftpHost: process.env.FTP_HOST || '0.0.0.0',
   pasvUrl: process.env.PASV_URL || '0.0.0.0',
 
@@ -14,8 +15,10 @@ const config = {
   webPort: parseInt(process.env.WEB_PORT, 10) || 3001,
 
   // Directory Settings
-  uploadDir: process.env.UPLOAD_DIR || path.join(os.tmpdir(), 'ftp-uploads'),
-  logDir: process.env.LOG_DIR || path.join(process.cwd(), 'logs'),
+  dataDir,
+  configDir: path.join(dataDir, 'config'),
+  logDir: path.join(dataDir, 'logs'),
+  uploadDir: path.join(dataDir, 'temp'),
 }
 
 export default config

@@ -71,8 +71,9 @@ export async function setupDestinations() {
 async function startServer() {
   // Load settings first
   await settings.reload()
-  console.log('📋 Settings loaded from config/settings.json')
+  console.log('📋 Settings loaded from data/config/settings.json')
 
+  await fs.mkdir(config.configDir, { recursive: true })
   await fs.mkdir(config.uploadDir, { recursive: true })
   await fs.mkdir(config.logDir, { recursive: true })
 
@@ -153,7 +154,7 @@ async function startServer() {
     console.error(`Failed to start server: ${error.message}`)
     if (error.code === 'EACCES' && config.ftpPort < 1024) {
       console.error(
-        `   Port ${config.ftpPort} requires elevated privileges. Try setting FTP_PORT to 2121 or higher.`,
+        `   Port ${config.ftpPort} requires elevated privileges. Use port 1024 or higher.`,
       )
     }
     process.exit(1)

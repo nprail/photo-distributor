@@ -6,7 +6,7 @@ This document explains how to configure different upload destinations for Photo 
 
 The modular destination system allows you to upload files to multiple destinations simultaneously. Each destination is independent and can be enabled/disabled via the web dashboard.
 
-All destination settings are stored in `config/settings.json` and can be managed through the web dashboard at `http://localhost:3001` under the Settings tab. Changes take effect immediately when you click Save.
+All destination settings are stored in `data/config/settings.json` and can be managed through the web dashboard at `http://localhost:3001` under the Settings tab. Changes take effect immediately when you click Save.
 
 ## Available Destinations
 
@@ -64,7 +64,7 @@ When a file with the same name already exists in the destination folder:
 
 #### Temporary Upload Directory
 
-Uploaded files are first stored in a temporary directory (configured via `UPLOAD_DIR` environment variable, defaults to `/tmp/ftp-uploads` or OS equivalent) before being processed and moved to their final destination. This ensures atomic file operations.
+Uploaded files are first stored in a temporary directory (`data/temp/` by default, or configured via `DATA_DIR` environment variable) before being processed and moved to their final destination. This ensures atomic file operations.
 
 ### 2. Google Drive
 
@@ -87,7 +87,7 @@ Upload files to Google Drive with automatic folder organization.
 8. Click "Connect" to authorize access in your browser
 9. Enable Google Drive in the Settings tab
 
-**Alternative:** You can manually save the credentials file as `config/google-drive-credentials.json` instead of using the web upload.
+**Alternative:** You can manually save the credentials file as `data/config/google-drive-credentials.json` instead of using the web upload.
 
 ### 3. Google Photos
 
@@ -109,7 +109,7 @@ Upload files directly to Google Photos with automatic album organization.
 8. Click "Connect" to authorize access in your browser
 9. Enable Google Photos in the Settings tab
 
-**Alternative:** You can manually save the credentials file as `config/google-photos-credentials.json` instead of using the web upload.
+**Alternative:** You can manually save the credentials file as `data/config/google-photos-credentials.json` instead of using the web upload.
 
 ## Example settings.json
 
@@ -127,14 +127,14 @@ Upload files directly to Google Photos with automatic album organization.
     },
     "googleDrive": {
       "enabled": true,
-      "credentialsPath": "./config/google-drive-credentials.json",
-      "tokenPath": "./config/google-drive-token.json",
+      "credentialsPath": "./data/config/google-drive-credentials.json",
+      "tokenPath": "./data/config/google-drive-token.json",
       "rootFolderId": null
     },
     "googlePhotos": {
       "enabled": false,
-      "credentialsPath": "./config/google-photos-credentials.json",
-      "tokenPath": "./config/google-photos-token.json"
+      "credentialsPath": "./data/config/google-photos-credentials.json",
+      "tokenPath": "./data/config/google-photos-token.json"
     }
   }
 }

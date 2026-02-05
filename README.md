@@ -31,8 +31,40 @@ This service was originally built as an FTP endpoint for Canon cameras to automa
 
 ## Installation
 
+### Using Docker (Recommended)
+
 ```bash
+# Clone the repository
+git clone https://github.com/nprail/photo-distributor.git
+cd photo-distributor
+
+# Create required directories
+mkdir -p data photos
+
+# Copy example .env file and update with your settings
+cp .env.example .env
+# Edit .env and set PASV_URL to your server IP
+nano .env
+
+# Start with Docker Compose
+docker compose up -d
+```
+
+Access the web dashboard at `http://localhost:3001` to configure settings.
+
+See [docs/DOCKER.md](docs/DOCKER.md) for complete Docker deployment instructions, including **Synology NAS** setup.
+
+### Using Node.js
+
+```bash
+# Install dependencies
 npm install
+
+# Copy example .env file and update with your settings
+cp .env.example .env
+
+# Start the server
+npm start
 ```
 
 ## Usage
@@ -40,59 +72,73 @@ npm install
 ### Starting the Server
 
 ```bash
-# Start with default settings (port 21, requires root/admin)
+# Start with default settings (port 2121)
 npm start
 
-# Start on a non-privileged port (recommended)
-FTP_PORT=2121 npm start
-
-# With custom photos directory
-FTP_PORT=2121 PHOTOS_DIR=/path/to/photos npm start
+# With custom data directory
+DATA_DIR=/path/to/data npm start
 ```
 
 ## Configuration
 
 The server uses two types of configuration:
 
-1. **Environment Variables** - Server startup settings that require a restart to change (ports, host bindings)
-2. **Settings File** - Runtime settings that can be changed via the web dashboard without restarting (`config/settings.json`)
+1. **Environment Variables** (in `.env` file) - Server startup settings that require a restart to change (ports, host bindings)
+2. **Settings File** - Runtime settings that can be changed via the web dashboard without restarting (`data/config/settings.json`)
 
 ### Environment Variables
 
-These settings require a server restart to take effect. You can set them directly or use a `.env` file.
-
-| Variable     | Default                             | Description                                                                |
-| ------------ | ----------------------------------- | -------------------------------------------------------------------------- |
-| `FTP_PORT`   | `21`                                | FTP server port. Use 2121+ to avoid requiring root privileges              |
-| `FTP_HOST`   | `0.0.0.0`                           | Host address to bind to. Use `0.0.0.0` for all interfaces or a specific IP |
-| `PASV_URL`   | `0.0.0.0`                           | Public IP for passive mode connections (important for remote clients)      |
-| `WEB_PORT`   | `3001`                              | Port for the web dashboard                                                 |
-| `UPLOAD_DIR` | `/tmp/ftp-uploads` (or OS temp dir) | Directory for temporary file uploads before processing. Must be writable.  |
-| `LOG_DIR`    | `./logs`                            | Directory for server logs and upload logs. Must be writable.               |
-
-### Web Dashboard Settings
-
-All other settings are configured through the web dashboard and stored in `config/settings.json`. These can be changed at runtime without restarting the server:
-
-- **FTP Credentials** - Username and password for FTP authentication
-- **Directories** - Photos directory, log directory paths
-- **Upload Behavior** - Whether to delete source files after upload
-- **Destinations** - Enable/disable and configure Local, Google Drive, and Google Photos destinations
-
-Open the web dashboard at `http://localhost:3001` (or your configured `WEB_PORT`) to manage these settings.
-
-### Example Configurations
-
-**Local development:**
+Create a `.env` file in the project root by copying `.env.example`:
 
 ```bash
-FTP_PORT=2121 npm start
+cp .env.example .env
+```
+
+Edit `.env` and update the variables for your setup. Here are the available options:
+
+| Variable     | Default         | Description                                                                                                                                       |
+| ------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FTP_PORT`   | `2121`          | FTP server port. Use 2121+ to avoid requiring root privileges                                                                                     |
+| `FTP_HOST`   | `0.0.0.0`       | Host address to bind to. Use `0.0.0.0` for all interfaces or a specific IP                                                                        |
+| `PASV_URL`   | `192.168.1.100` | **IMPORTANT**: Public IP or hostname for passive mode connections. Set this to your server's IP address that external FTP clients will connect to |
+| `WEB_PORT`   | `3001`          | Port for the web dashboard                                                                                                                        |
+| `DATA_DIR`   | `./data`        | Base directory for config, logs, and temp files. Subdirectories: `config/`, `logs/`, `temp/`                                                      |
+| `PHOTOS_DIR` | `./photos`      | Where photos will be stored (local filesystem destination) - this only applies to docker                                                          |
+| `NODE_ENV`   | `production`    | Node.js environment mode                                                                                                                          |
+
+**Important Notes:**
+
+- `.env` is **not** committed to git (see `.gitignore`) - keep your local configuration private
+- `.env.example` shows example values and should be committed to version control
+- ChQuick Setup Examples
+
+**Local development** (using `.env`):
+
+```bash
+# .env file
+FTP_PORT=2121
+PASV_URL=localhost
+
+npm start
+```
+
+**Network accessible (LAN)** (using `.env`):
+
+```bash
+# .env file
+FTP_PORT=2121
+FTP_HOST=0.0.0.0
+PASV_URL=192.168.1.100
+WEB_PORT=3001
+PHOTOS_DIR=/path/to/photos
+
+npm start
 ```
 
 **Network accessible (LAN):**
 
 ```bash
-FTP_PORT=2121 FTP_HOST=0.0.0.0 PASV_URL=192.168.1.100 npm start
+FTP_HOST=0.0.0.0 PASV_URL=192.168.1.100 npm start
 ```
 
 **Sample .env file:**
@@ -132,14 +178,6 @@ The server uses passive mode ports 1024-1048 for data connections. This range ca
 
 ## Troubleshooting
 
-### "Port requires elevated privileges"
-
-Ports below 1024 (including default FTP port 21) require root/administrator access. Solution:
-
-```bash
-FTP_PORT=2121 npm start
-```
-
 ### Files not being organized correctly
 
 1. Check that the file has valid EXIF metadata
@@ -151,7 +189,7 @@ FTP_PORT=2121 npm start
 Ensure the server is binding to all interfaces and the passive URL is correct:
 
 ```bash
-FTP_HOST=0.0.0.0 PASV_URL=<your-local-ip> FTP_PORT=2121 npm start
+FTP_HOST=0.0.0.0 PASV_URL=<your-local-ip> npm start
 ```
 
 ## Security

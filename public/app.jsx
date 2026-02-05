@@ -614,6 +614,33 @@ function ActiveUploadIndicator({ uploads }) {
   )
 }
 
+// Active Receive Indicator (files being received via FTP)
+function ActiveReceiveIndicator({ receives }) {
+  if (!receives || receives.length === 0) return null
+
+  return (
+    <div className="mb-4 p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+      <div className="flex items-center gap-2 mb-2">
+        <div className="animate-pulse h-4 w-4 bg-green-400 rounded-full"></div>
+        <span className="text-sm text-green-400 font-medium">
+          {receives.length} file{receives.length !== 1 ? 's' : ''} receiving
+        </span>
+      </div>
+      <div className="space-y-1">
+        {receives.map((receive) => (
+          <div
+            key={receive.id}
+            className="flex items-center justify-between text-xs"
+          >
+            <span className="text-gray-300">{receive.filename}</span>
+            <span className="text-gray-500">← FTP</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function getTimeAgo(date) {
   const seconds = Math.floor((new Date() - date) / 1000)
   const intervals = [
@@ -674,6 +701,7 @@ function App() {
   const [error, setError] = useState(null)
   const [successMessage, setSuccessMessage] = useState(null)
   const [expandedFiles, setExpandedFiles] = useState(new Set())
+  const [wsConnected, setWsConnected] = useState(false)
 
   const toggleFileExpanded = (id) => {
     setExpandedFiles((prev) => {
@@ -687,37 +715,19 @@ function App() {
     })
   }
 
-  const fetchStatus = useCallback(async () => {
-    try {
-      const statusRes = await fetch('/api/status')
-      if (!statusRes.ok) throw new Error('Failed to fetch status')
-      setStatus(await statusRes.json())
-    } catch (err) {
-      setError(err.message)
-    }
-  }, [])
-
-  const fetchData = useCallback(async (includeSettings = false) => {
+  // Fetch initial data (auth status, settings) - only called once
+  const fetchInitialData = useCallback(async () => {
     try {
       setError(null)
-      const fetches = [
-        fetch('/api/logs/received?limit=50'),
+      const [authRes, destRes, settingsRes] = await Promise.all([
         fetch('/api/auth/google/status'),
         fetch('/api/destinations'),
-      ]
-      if (includeSettings) {
-        fetches.push(fetch('/api/settings'))
-      }
+        fetch('/api/settings'),
+      ])
 
-      const [receivedRes, authRes, destRes, settingsRes] =
-        await Promise.all(fetches)
-
-      setReceivedFiles(await receivedRes.json())
       setAuthStatus(await authRes.json())
       setDestinations(await destRes.json())
-      if (settingsRes) {
-        setSettings(await settingsRes.json())
-      }
+      setSettings(await settingsRes.json())
     } catch (err) {
       setError(err.message)
     } finally {
@@ -725,16 +735,75 @@ function App() {
     }
   }, [])
 
+  // WebSocket connection for real-time updates
   useEffect(() => {
-    fetchStatus() // Initial status fetch
-    fetchData(true) // Include settings on initial load
-    const statusInterval = setInterval(() => fetchStatus(), 1000) // Fetch status every second
-    const dataInterval = setInterval(() => fetchData(false), 5000) // Fetch other data every 5 seconds
-    return () => {
-      clearInterval(statusInterval)
-      clearInterval(dataInterval)
+    fetchInitialData()
+
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`
+    let ws = null
+    let reconnectTimeout = null
+
+    const connect = () => {
+      ws = new WebSocket(wsUrl)
+
+      ws.onopen = () => {
+        console.log('WebSocket connected')
+        setWsConnected(true)
+        setError(null)
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data)
+          
+          if (message.type === 'status') {
+            // Full status update
+            const data = message.data
+            setStatus({
+              ftpServer: data.ftpServer,
+              destinations: data.destinations,
+              activeReceives: data.activeReceives,
+              activeUploads: data.activeUploads,
+              transfers: data.transfers,
+              stats: data.stats,
+            })
+            if (data.receivedFiles) {
+              setReceivedFiles(data.receivedFiles)
+            }
+          } else if (message.type === 'transfer:start' || message.type === 'transfer:complete') {
+            // Incremental transfer updates - request fresh status
+            // The server will broadcast full status on these events
+          }
+        } catch (err) {
+          console.error('Error parsing WebSocket message:', err)
+        }
+      }
+
+      ws.onclose = () => {
+        console.log('WebSocket disconnected, reconnecting...')
+        setWsConnected(false)
+        // Attempt to reconnect after 2 seconds
+        reconnectTimeout = setTimeout(connect, 2000)
+      }
+
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error)
+        ws.close()
+      }
     }
-  }, [fetchStatus, fetchData])
+
+    connect()
+
+    return () => {
+      if (reconnectTimeout) {
+        clearTimeout(reconnectTimeout)
+      }
+      if (ws) {
+        ws.close()
+      }
+    }
+  }, [fetchInitialData])
 
   // Handle URL hash changes (browser back/forward)
   useEffect(() => {
@@ -773,7 +842,7 @@ function App() {
             if (popup.closed) {
               clearInterval(pollInterval)
               // Refetch settings and auth status after OAuth completes
-              fetchData(true)
+              fetchInitialData()
             }
           }, 500)
         }
@@ -808,7 +877,7 @@ function App() {
       }
 
       // Refetch auth status to show the new state
-      await fetchData(true)
+      await fetchInitialData()
 
       // Show success message briefly
       setSuccessMessage(data.message)
@@ -839,7 +908,7 @@ function App() {
 
       setSuccessMessage(data.message || 'Settings saved')
       setTimeout(() => setSuccessMessage(null), 3000)
-      fetchData()
+      fetchInitialData()
     } catch (err) {
       setError(err.message)
     } finally {
@@ -892,7 +961,7 @@ function App() {
               </div>
             </div>
             <button
-              onClick={fetchData}
+              onClick={fetchInitialData}
               className="p-2 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white"
               title="Refresh"
             >
@@ -924,6 +993,11 @@ function App() {
         {/* Tab Content */}
         {activeTab === 'status' && (
           <div className="space-y-8">
+            {/* Active Receives */}
+            {status?.activeReceives && status.activeReceives.length > 0 && (
+              <ActiveReceiveIndicator receives={status.activeReceives} />
+            )}
+
             {/* Active Uploads */}
             {status?.activeUploads &&
               Object.keys(status.activeUploads).length > 0 && (
@@ -1024,6 +1098,11 @@ function App() {
                 {receivedFiles.length} files received
               </span>
             </div>
+
+            {/* Active Receives */}
+            {status?.activeReceives && status.activeReceives.length > 0 && (
+              <ActiveReceiveIndicator receives={status.activeReceives} />
+            )}
 
             {/* Active Uploads */}
             {status?.activeUploads &&

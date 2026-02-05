@@ -11,7 +11,7 @@ This service was originally built as an FTP endpoint for Canon cameras to automa
 - **EXIF Metadata Extraction**: Reads capture date from photo EXIF data for accurate organization
 - **Multiple Format Support**: Handles common photo and video formats including RAW files
 - **Duplicate Handling**: Automatically renames files if a file with the same name already exists
-- **FTP Authentication**: Supports both anonymous access and username/password authentication
+- **FTP Authentication**: Supports username/password authentication
 - **Web Dashboard**: Built-in React-based dashboard for monitoring transfers and managing Google authentication
 
 ## Supported File Formats
@@ -153,6 +153,19 @@ Ensure the server is binding to all interfaces and the passive URL is correct:
 ```bash
 FTP_HOST=0.0.0.0 PASV_URL=<your-local-ip> FTP_PORT=2121 npm start
 ```
+
+## Security
+
+This application is designed for use on trusted, private networks only.
+
+**DO NOT** expose either FTP or the web dashboard to the internet.
+
+**Key security considerations:**
+
+- Web dashboard has no authentication
+- FTP protocol is unencrypted
+- FTP authentication is not rate limited
+- Not suitable for public internet exposure
 
 ## License
 

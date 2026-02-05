@@ -719,15 +719,13 @@ function App() {
   const fetchInitialData = useCallback(async () => {
     try {
       setError(null)
-      const [authRes, destRes, settingsRes] = await Promise.all([
-        fetch('/api/auth/google/status'),
-        fetch('/api/destinations'),
-        fetch('/api/settings'),
-      ])
+      // Single API call for all initial data
+      const res = await fetch('/api/init')
+      const data = await res.json()
 
-      setAuthStatus(await authRes.json())
-      setDestinations(await destRes.json())
-      setSettings(await settingsRes.json())
+      setAuthStatus(data.authStatus)
+      setDestinations(data.destinations)
+      setSettings(data.settings)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -756,7 +754,7 @@ function App() {
       ws.onmessage = (event) => {
         try {
           const message = JSON.parse(event.data)
-          
+
           if (message.type === 'status') {
             // Full status update
             const data = message.data
@@ -771,7 +769,10 @@ function App() {
             if (data.receivedFiles) {
               setReceivedFiles(data.receivedFiles)
             }
-          } else if (message.type === 'transfer:start' || message.type === 'transfer:complete') {
+          } else if (
+            message.type === 'transfer:start' ||
+            message.type === 'transfer:complete'
+          ) {
             // Incremental transfer updates - request fresh status
             // The server will broadcast full status on these events
           }

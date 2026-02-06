@@ -1,6 +1,16 @@
-# Photo Distributor
+<p align="center">
+  <img src="logo.svg" alt="Photo Distributor Logo" width="160" />
+  <br /><br />
+  <strong>Photo Distributor</strong>
+  <br />
+  <em>An FTP server that distributes photos to one or more destinations.</em>
+  <br /><br />
+  <a href="#installation"><img src="https://img.shields.io/badge/docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker Ready" /></a>
+  <a href="#features"><img src="https://img.shields.io/badge/destinations-local%20%7C%20gdrive%20%7C%20gphotos-8b5cf6" alt="Destinations" /></a>
+  <a href="#supported-file-formats"><img src="https://img.shields.io/badge/formats-JPEG%20%7C%20RAW%20%7C%20video-34d399" alt="Formats" /></a>
+</p>
 
-An FTP server that distributes photos to one or more destinations.
+---
 
 This service was originally built as an FTP endpoint for Canon cameras to automatically upload media to multiple locations including a NAS and Google Photos.
 

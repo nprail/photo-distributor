@@ -6,7 +6,7 @@ This document explains how to configure different upload destinations for Photo 
 
 The modular destination system allows you to upload files to multiple destinations simultaneously. Each destination is independent and can be enabled/disabled via the web dashboard.
 
-All destination settings are stored in `data/config/settings.json` and can be managed through the web dashboard at `http://localhost:3001` under the Settings tab. Changes take effect immediately when you click Save.
+All destination settings are stored in a LokiJS database (`data/photo-distributor.db`) and can be managed through the web dashboard at `http://localhost:3001` under the Settings tab. Changes take effect immediately when you click Save.
 
 ## Available Destinations
 
@@ -54,17 +54,16 @@ If no EXIF date is found (or for video files), the server falls back to:
 - File birth time (creation date)
 - File modification time
 
-#### Duplicate File Handling
+#### Duplicate Handling
 
-When a file with the same name already exists in the destination folder:
+Duplicates are handled at two levels:
 
-- The new file is renamed with a numeric suffix: `filename_1.jpg`, `filename_2.jpg`, etc.
-- Original file extension is preserved
-- Counter increments until a unique name is found
+1. **Hash-based rejection**: Before processing, each file's SHA-256 hash is checked against all previously received files. Exact duplicates are rejected entirely.
+2. **Filename conflicts**: When a file with the same name already exists in the destination folder, the new file is renamed with a numeric suffix: `filename_1.jpg`, `filename_2.jpg`, etc.
 
 #### Temporary Upload Directory
 
-Uploaded files are first stored in a temporary directory (`data/temp/` by default, or configured via `DATA_DIR` environment variable) before being processed and moved to their final destination. This ensures atomic file operations.
+Uploaded files are first stored in a temporary directory (`data/temp/`) before being processed and copied to their final destination(s).
 
 ### 2. Google Drive
 
@@ -111,7 +110,9 @@ Upload files directly to Google Photos with automatic album organization.
 
 **Alternative:** You can manually save the credentials file as `data/config/google-photos-credentials.json` instead of using the web upload.
 
-## Example settings.json
+## Example Default Settings
+
+The following shows the default settings structure (managed via the web dashboard, stored in the database):
 
 ```json
 {
@@ -126,21 +127,15 @@ Upload files directly to Google Photos with automatic album organization.
       "photosDir": "./photos"
     },
     "googleDrive": {
-      "enabled": true,
-      "credentialsPath": "./data/config/google-drive-credentials.json",
-      "tokenPath": "./data/config/google-drive-token.json",
+      "enabled": false,
       "rootFolderId": null
     },
     "googlePhotos": {
-      "enabled": false,
-      "credentialsPath": "./data/config/google-photos-credentials.json",
-      "tokenPath": "./data/config/google-photos-token.json"
+      "enabled": false
     }
   }
 }
 ```
-
-Note: It's recommended to use the web dashboard to edit settings rather than manually editing this file.
 
 ## Adding New Destinations
 
@@ -148,8 +143,9 @@ To add a new destination:
 
 1. Create a new file in `lib/destinations/` extending `BaseDestination`
 2. Implement the required methods: `initialize()`, `upload()`, `isReady()`
-3. Register the destination in `server.js`
-4. Add configuration options to `config.js`
+3. Export the destination class from `lib/destinations/index.js`
+4. Add default configuration to `lib/settings.js`
+5. Register the destination in `server.js` `setupDestinations()`
 
 Example:
 
@@ -187,22 +183,16 @@ When uploading, each destination receives metadata about the file:
   destinationFilename: 'IMG_1234.jpg',
   date: Date,           // Extracted from EXIF or file stats
   mimeType: 'image/jpeg',
-  extension: '.jpg'
+  extension: '.jpg',
+  receivedId: 'recv-...' // Internal tracking ID
 }
 ```
 
 ## Logging
 
-All uploads are logged to `logs/uploads.jsonl` with destination-specific information:
+All activity is logged to two JSONL files in the `data/logs/` directory:
 
-```json
-{
-  "timestamp": "2026-01-30T12:00:00.000Z",
-  "original": "/tmp/ftp-uploads/IMG_1234.jpg",
-  "destination": "google-drive",
-  "result": {
-    "fileId": "abc123",
-    "webViewLink": "https://drive.google.com/..."
-  }
-}
-```
+- **`received.jsonl`** - Records every file received via FTP
+- **`destinations.jsonl`** - Records each upload to a destination with success/failure status
+
+These files serve as an audit trail.

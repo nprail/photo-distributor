@@ -130,7 +130,7 @@ The first time you run the container, you need to:
 
 ### Settings
 
-On first startup, the service will create a default `settings.json` with sensible defaults. Access the dashboard at `http://your-server-ip:3001` to:
+On first startup, the service will create default settings in its database. Access the dashboard at `http://your-server-ip:3001` to:
 
 - Set FTP credentials
 - Configure destinations (Local, Google Drive, Google Photos)
@@ -213,13 +213,16 @@ If you have the Synology firewall enabled:
 
 ## Environment Variables
 
-| Variable   | Default     | Description                                              |
-| ---------- | ----------- | -------------------------------------------------------- |
-| `FTP_PORT` | `2121`      | FTP server port (2121 avoids permission issues)          |
-| `FTP_HOST` | `0.0.0.0`   | FTP bind address                                         |
-| `PASV_URL` | `0.0.0.0`   | **Important**: Your server's external IP for passive FTP |
-| `WEB_PORT` | `3001`      | Web dashboard port                                       |
-| `DATA_DIR` | `/app/data` | Base directory for config, logs, and temp files          |
+| Variable       | Default                 | Description                                                              |
+| -------------- | ----------------------- | ------------------------------------------------------------------------ |
+| `FTP_PORT`     | `2121`                  | FTP server port (2121 avoids permission issues)                          |
+| `FTP_HOST`     | `0.0.0.0`               | FTP bind address                                                         |
+| `PASV_URL`     | `0.0.0.0`               | **Important**: Your server's external IP for passive FTP                 |
+| `WEB_PORT`     | `3001`                  | Web dashboard port                                                       |
+| `WEB_BASE_URL` | `http://localhost:3001` | Base URL for the web dashboard (used for OAuth redirects)                |
+| `DATA_DIR`     | `/app/data`             | Base directory for config, logs, and temp files                          |
+| `PHOTOS_DIR`   | `./photos`              | Host path for photo storage (used in docker-compose volume mapping only) |
+| `NODE_ENV`     | `production`            | Node.js environment mode                                                 |
 
 ### Setting PASV_URL
 
@@ -230,13 +233,13 @@ The `PASV_URL` is critical for FTP passive mode to work:
 
 ## Volume Mounts
 
-| Container Path     | Purpose                                           |
-| ------------------ | ------------------------------------------------- |
-| `/app/data`        | All application data (config, logs, temp uploads) |
-| `/app/data/config` | Configuration files, OAuth credentials and tokens |
-| `/app/data/logs`   | Application logs                                  |
-| `/app/data/temp`   | Temporary FTP upload storage                      |
-| `/data/photos`     | Final photo destination (organized by date)       |
+| Container Path     | Purpose                                                     |
+| ------------------ | ----------------------------------------------------------- |
+| `/app/data`        | All application data (database, config, logs, temp uploads) |
+| `/app/data/config` | OAuth credentials and tokens                                |
+| `/app/data/logs`   | JSONL audit log files                                       |
+| `/app/data/temp`   | Temporary FTP upload storage                                |
+| `/data/photos`     | Final photo destination (organized by date)                 |
 
 ## Networking
 
@@ -325,8 +328,9 @@ docker compose logs photo-distributor
 
 1. OAuth callback requires the web dashboard to be accessible
 2. Ensure port 3001 is accessible from your browser
-3. Check that redirect URI in Google Cloud Console matches:
-   `http://your-nas-ip:3001/api/auth/google/callback`
+3. Set `WEB_BASE_URL` in your `.env` to the URL you access the dashboard from (e.g., `http://192.168.1.100:3001`)
+4. Check that redirect URI in Google Cloud Console matches:
+   `<WEB_BASE_URL>/api/auth/google/callback`
 
 ### Photos not appearing
 

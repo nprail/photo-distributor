@@ -7,7 +7,13 @@ const dataDir = process.env.DATA_DIR || path.join(process.cwd(), 'data')
 
 const configDir = path.join(dataDir, 'config')
 
+// Docker environment detection
+const isDocker = process.env.DOCKER_ENV === 'true'
+
 const config = {
+  // Docker environment flag
+  isDocker,
+
   // FTP Server Settings
   ftpPort: parseInt(process.env.FTP_PORT, 10) || 2121,
   ftpHost: process.env.FTP_HOST || '0.0.0.0',

@@ -29,7 +29,8 @@ COPY . .
 
 # Set default environment variables
 ENV NODE_ENV=production \
-    DATA_DIR=/app/data
+    DATA_DIR=/app/data \
+    DOCKER_ENV=true
 
 # Expose FTP and web ports
 # FTP command port (2121 avoids permission issues)

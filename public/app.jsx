@@ -820,6 +820,7 @@ function App() {
   const [authStatus, setAuthStatus] = useState(null)
   const [destinations, setDestinations] = useState([])
   const [settings, setSettings] = useState(null)
+  const [isDocker, setIsDocker] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -850,6 +851,7 @@ function App() {
       setAuthStatus(data.authStatus)
       setDestinations(data.destinations)
       setSettings(data.settings)
+      setIsDocker(data.isDocker || false)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -1456,7 +1458,13 @@ function App() {
                       updateSetting('destinations.local.photosDir', v)
                     }
                     placeholder="/path/to/photos"
+                    disabled={isDocker}
                   />
+                  {isDocker && (
+                    <p className="text-xs text-gray-400 mt-1">
+                      Locked to /data/photos in Docker. Use a volume mount to map this to your host directory.
+                    </p>
+                  )}
                 </div>
               )}
             </Card>

@@ -13,6 +13,7 @@ const config = {
 
   // Web Dashboard Settings
   webPort: parseInt(process.env.WEB_PORT, 10) || 3001,
+  webBaseUrl: process.env.WEB_BASE_URL || 'http://localhost:3001',
 
   // Directory Settings
   dataDir,

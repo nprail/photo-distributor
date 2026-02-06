@@ -3,6 +3,7 @@ import { promises as fs } from 'fs'
 import bcrypt from 'bcrypt'
 
 import config from './config.js'
+import { initDatabase, saveDatabase, closeDatabase } from './lib/db.js'
 import settings from './lib/settings.js'
 import { PHOTO_EXTENSIONS } from './lib/exif.js'
 import { VirtualFileSystem } from './lib/virtual-fs.js'
@@ -69,9 +70,13 @@ export async function setupDestinations() {
 }
 
 async function startServer() {
-  // Load settings first
+  // Initialize database first
+  await initDatabase()
+  console.log('🗄️  Database initialized')
+
+  // Load settings from database
   await settings.reload()
-  console.log('📋 Settings loaded from data/config/settings.json')
+  console.log('📋 Settings loaded')
 
   await fs.mkdir(config.configDir, { recursive: true })
   await fs.mkdir(config.uploadDir, { recursive: true })
@@ -161,6 +166,9 @@ async function startServer() {
   const shutdown = async () => {
     console.log('\n🛑 Shutting down...')
     await destinationManager.cleanup()
+    await saveDatabase()
+    await closeDatabase()
+    console.log('🗄️  Database saved and closed')
     process.exit(0)
   }
 

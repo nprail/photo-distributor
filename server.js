@@ -5,7 +5,7 @@ import bcrypt from 'bcrypt'
 import config from './config.js'
 import settings from './lib/settings.js'
 import { PHOTO_EXTENSIONS } from './lib/exif.js'
-import { PhotoFileSystem } from './lib/photos-fs.js'
+import { VirtualFileSystem } from './lib/virtual-fs.js'
 import {
   destinationManager,
   LocalDestination,
@@ -86,10 +86,7 @@ async function startServer() {
     pasv_url: config.pasvUrl,
     pasv_min: 1024,
     pasv_max: 1048,
-    greeting: [
-      'Welcome to Photo Distributor',
-      'Files will be organized by date automatically',
-    ],
+    greeting: ['Welcome to Photo Distributor'],
   })
 
   ftpServer.on(
@@ -110,7 +107,7 @@ async function startServer() {
         if (username === settings.ftpUsername && passwordMatches) {
           console.log(`✅ User ${username} authenticated successfully`)
           resolve({
-            fs: new PhotoFileSystem(connection, {
+            fs: new VirtualFileSystem(connection, {
               SUPPORTED_EXTENSIONS,
             }),
           })

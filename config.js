@@ -5,6 +5,8 @@ import path from 'path'
 
 const dataDir = process.env.DATA_DIR || path.join(process.cwd(), 'data')
 
+const configDir = path.join(dataDir, 'config')
+
 const config = {
   // FTP Server Settings
   ftpPort: parseInt(process.env.FTP_PORT, 10) || 2121,
@@ -17,9 +19,15 @@ const config = {
 
   // Directory Settings
   dataDir,
-  configDir: path.join(dataDir, 'config'),
+  configDir,
   logDir: path.join(dataDir, 'logs'),
   uploadDir: path.join(dataDir, 'temp'),
+
+  // Standardized credential/token paths
+  googleDriveCredentialsPath: path.join(configDir, 'google-drive-credentials.json'),
+  googleDriveTokenPath: path.join(configDir, 'google-drive-token.json'),
+  googlePhotosCredentialsPath: path.join(configDir, 'google-photos-credentials.json'),
+  googlePhotosTokenPath: path.join(configDir, 'google-photos-token.json'),
 }
 
 export default config

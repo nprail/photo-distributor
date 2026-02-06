@@ -226,6 +226,22 @@ const Icons = {
       />
     </svg>
   ),
+  AlertTriangle: () => (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-4 w-4"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={2}
+        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+      />
+    </svg>
+  ),
 }
 
 // Status Badge Component
@@ -436,7 +452,9 @@ function FileUploadButton({
 }
 
 // Received File Entry Component (new)
-function ReceivedFileEntry({ file, expanded, onToggle }) {
+function ReceivedFileEntry({ file, expanded, onToggle, onRetry }) {
+  const [showErrors, setShowErrors] = useState({})
+  const [retrying, setRetrying] = useState({})
   const date = new Date(file.timestamp)
   const timeAgo = getTimeAgo(date)
   const destinations = file.destinations || []
@@ -444,11 +462,34 @@ function ReceivedFileEntry({ file, expanded, onToggle }) {
   const failCount = destinations.filter((d) => !d.success).length
   const hasDestinations = destinations.length > 0
 
+  // Compute unique failed destinations (that haven't since succeeded)
+  const succeededDests = new Set(
+    destinations.filter((d) => d.success).map((d) => d.destination)
+  )
+  const hasRetryableFailures = destinations.some(
+    (d) => !d.success && !succeededDests.has(d.destination)
+  )
+
   const formatSize = (bytes) => {
     if (!bytes) return ''
     if (bytes < 1024) return `${bytes} B`
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const handleRetry = async (e, destination) => {
+    e.stopPropagation()
+    setRetrying((prev) => ({ ...prev, [destination]: true }))
+    try {
+      await onRetry(file.id, destination)
+    } finally {
+      setRetrying((prev) => ({ ...prev, [destination]: false }))
+    }
+  }
+
+  const toggleError = (e, index) => {
+    e.stopPropagation()
+    setShowErrors((prev) => ({ ...prev, [index]: !prev[index] }))
   }
 
   return (
@@ -534,6 +575,8 @@ function ReceivedFileEntry({ file, expanded, onToggle }) {
             }
 
             const destinationInfo = getDestinationInfo()
+            const isFailed = !dest.success
+            const hasSucceededSince = succeededDests.has(dest.destination)
 
             return (
               <div
@@ -565,12 +608,38 @@ function ReceivedFileEntry({ file, expanded, onToggle }) {
                         {destinationInfo.path}
                       </span>
                     )}
+                    {isFailed && dest.error && showErrors[i] && (
+                      <span className="text-xs text-red-400 mt-1 break-all">
+                        {dest.error}
+                      </span>
+                    )}
                   </div>
                 </div>
-                <div className="text-right text-xs text-gray-500 ml-2 whitespace-nowrap">
-                  {dest.duration && <span>{dest.duration}ms</span>}
-                  {dest.error && (
-                    <span className="text-red-400 ml-2">{dest.error}</span>
+                <div className="flex items-center gap-2 ml-2 whitespace-nowrap">
+                  {dest.duration && <span className="text-xs text-gray-500">{dest.duration}ms</span>}
+                  {isFailed && dest.error && (
+                    <button
+                      onClick={(e) => toggleError(e, i)}
+                      className="p-1 rounded text-yellow-400 hover:bg-yellow-500/20 transition-colors"
+                      title={showErrors[i] ? 'Hide error' : 'Show error'}
+                    >
+                      <Icons.AlertTriangle />
+                    </button>
+                  )}
+                  {isFailed && !hasSucceededSince && onRetry && (
+                    <button
+                      onClick={(e) => handleRetry(e, dest.destination)}
+                      disabled={retrying[dest.destination]}
+                      className="px-2 py-1 text-xs bg-primary/20 text-primary hover:bg-primary/30 rounded transition-colors disabled:opacity-50 flex items-center gap-1"
+                      title="Retry upload"
+                    >
+                      {retrying[dest.destination] ? (
+                        <div className="animate-spin h-3 w-3 border-2 border-primary border-t-transparent rounded-full"></div>
+                      ) : (
+                        <Icons.Refresh />
+                      )}
+                      <span>Retry</span>
+                    </button>
                   )}
                 </div>
               </div>
@@ -931,6 +1000,53 @@ function App() {
     })
   }
 
+  const handleRetryUpload = async (receivedId, destination) => {
+    try {
+      const res = await fetch('/api/retry-upload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ receivedId, destination }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Retry failed')
+    } catch (err) {
+      setError(`Retry failed: ${err.message}`)
+      setTimeout(() => setError(null), 5000)
+    }
+  }
+
+  const [retryingAll, setRetryingAll] = useState(false)
+
+  const handleRetryAllFailed = async () => {
+    try {
+      setRetryingAll(true)
+      const res = await fetch('/api/retry-all-failed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Retry all failed')
+      const succeeded = data.results?.filter((r) => r.success).length || 0
+      const failed = data.results?.filter((r) => !r.success).length || 0
+      if (succeeded > 0 || failed > 0) {
+        setSuccessMessage(`Retried ${data.retried} upload(s): ${succeeded} succeeded, ${failed} failed`)
+        setTimeout(() => setSuccessMessage(null), 5000)
+      }
+    } catch (err) {
+      setError(`Retry all failed: ${err.message}`)
+      setTimeout(() => setError(null), 5000)
+    } finally {
+      setRetryingAll(false)
+    }
+  }
+
+  // Check if any files have retryable failed uploads
+  const hasAnyFailedUploads = receivedFiles.some((file) => {
+    const dests = file.destinations || []
+    const succeededDests = new Set(dests.filter((d) => d.success).map((d) => d.destination))
+    return dests.some((d) => !d.success && !succeededDests.has(d.destination))
+  })
+
   const tabs = [
     { id: 'status', label: 'Status' },
     { id: 'logs', label: 'Files' },
@@ -1079,6 +1195,7 @@ function App() {
                     file={file}
                     expanded={expandedFiles.has(file.id)}
                     onToggle={() => toggleFileExpanded(file.id)}
+                    onRetry={handleRetryUpload}
                   />
                 ))}
                 {receivedFiles.length === 0 && (
@@ -1095,9 +1212,25 @@ function App() {
           <Card>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-lg font-semibold">Received Files</h2>
-              <span className="text-sm text-gray-400">
-                {receivedFiles.length} files received
-              </span>
+              <div className="flex items-center gap-3">
+                {hasAnyFailedUploads && (
+                  <button
+                    onClick={handleRetryAllFailed}
+                    disabled={retryingAll}
+                    className="px-3 py-1.5 text-sm bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {retryingAll ? (
+                      <div className="animate-spin h-4 w-4 border-2 border-red-400 border-t-transparent rounded-full"></div>
+                    ) : (
+                      <Icons.Refresh />
+                    )}
+                    <span>Retry All Failed</span>
+                  </button>
+                )}
+                <span className="text-sm text-gray-400">
+                  {receivedFiles.length} files received
+                </span>
+              </div>
             </div>
 
             {/* Active Receives */}
@@ -1118,6 +1251,7 @@ function App() {
                   file={file}
                   expanded={expandedFiles.has(file.id)}
                   onToggle={() => toggleFileExpanded(file.id)}
+                  onRetry={handleRetryUpload}
                 />
               ))}
               {receivedFiles.length === 0 && (

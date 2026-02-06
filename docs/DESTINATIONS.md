@@ -86,8 +86,6 @@ Upload files to Google Drive with automatic folder organization.
 8. Click "Connect" to authorize access in your browser
 9. Enable Google Drive in the Settings tab
 
-**Alternative:** You can manually save the credentials file as `data/config/google-drive-credentials.json` instead of using the web upload.
-
 ### 3. Google Photos
 
 Upload files directly to Google Photos with automatic album organization.
@@ -107,35 +105,6 @@ Upload files directly to Google Photos with automatic album organization.
 7. **Upload your credentials** by clicking "Upload Credentials" next to Google Photos and selecting your downloaded JSON file
 8. Click "Connect" to authorize access in your browser
 9. Enable Google Photos in the Settings tab
-
-**Alternative:** You can manually save the credentials file as `data/config/google-photos-credentials.json` instead of using the web upload.
-
-## Example Default Settings
-
-The following shows the default settings structure (managed via the web dashboard, stored in the database):
-
-```json
-{
-  "ftp": {
-    "username": "anonymous",
-    "password": "anonymous"
-  },
-  "deleteAfterUpload": true,
-  "destinations": {
-    "local": {
-      "enabled": true,
-      "photosDir": "./photos"
-    },
-    "googleDrive": {
-      "enabled": false,
-      "rootFolderId": null
-    },
-    "googlePhotos": {
-      "enabled": false
-    }
-  }
-}
-```
 
 ## Adding New Destinations
 

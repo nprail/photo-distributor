@@ -23,11 +23,11 @@ services:
 
     volumes:
       # Data directory (config, logs, temp)
-      - ./data:/app/data
+      - ./data:/app/data:rw
 
       # Photos destination directory
       # Maps PHOTOS_DIR from .env to /data/photos inside container
-      - ${PHOTOS_DIR:-./photos}:/data/photos
+      - ${PHOTOS_DIR:-./photos}:/data/photos:rw
 
     healthcheck:
       test:

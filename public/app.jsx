@@ -887,7 +887,6 @@ function App() {
               destinations: data.destinations,
               activeReceives: data.activeReceives,
               activeUploads: data.activeUploads,
-              transfers: data.transfers,
               stats: data.stats,
             })
             if (data.receivedFiles) {

@@ -1185,7 +1185,7 @@ function App() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <StatsCard
                 title="Files Received"
-                value={receivedFiles.length || 0}
+                value={status?.stats?.totalReceivedFiles || 0}
                 icon={Icons.Image}
               />
               <StatsCard
@@ -1300,7 +1300,7 @@ function App() {
                   </button>
                 )}
                 <span className="text-sm text-gray-400">
-                  {receivedFiles.length} files received
+                  {status?.stats?.totalReceivedFiles || 0} files received
                 </span>
               </div>
             </div>

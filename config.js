@@ -19,6 +19,17 @@ const config = {
   ftpHost: process.env.FTP_HOST || '0.0.0.0',
   pasvUrl: process.env.PASV_URL || '0.0.0.0',
 
+  // TLS Settings
+  // Set FTP_TLS=false to explicitly disable TLS (not recommended for public access)
+  tlsEnabled: process.env.FTP_TLS !== 'false',
+  // Optional: provide custom cert/key paths (otherwise auto-generated self-signed cert is used)
+  tlsCert: process.env.FTP_TLS_CERT || '',
+  tlsKey: process.env.FTP_TLS_KEY || '',
+
+  // Rate Limiting Settings
+  loginMaxAttempts: parseInt(process.env.FTP_LOGIN_MAX_ATTEMPTS, 10) || 5,
+  loginWindowMs: parseInt(process.env.FTP_LOGIN_WINDOW_MS, 10) || 15 * 60 * 1000,
+
   // Web Dashboard Settings
   webPort: parseInt(process.env.WEB_PORT, 10) || 3001,
   webBaseUrl: process.env.WEB_BASE_URL || 'http://localhost:3001',

@@ -14,6 +14,8 @@ import {
   GooglePhotosDestination,
 } from './lib/destinations/index.js'
 import { startWebServer } from './lib/web-server.js'
+import { loadTlsOptions } from './lib/tls.js'
+import { LoginRateLimiter } from './lib/rate-limiter.js'
 
 const VIDEO_EXTENSIONS = [
   '.mp4',
@@ -85,6 +87,9 @@ async function startServer() {
   // Setup upload destinations
   await setupDestinations()
 
+  // Load TLS options for FTPS
+  const tls = await loadTlsOptions()
+
   const ftpServer = new FtpSrv({
     url: `ftp://${config.ftpHost}:${config.ftpPort}`,
     anonymous: false,
@@ -92,13 +97,32 @@ async function startServer() {
     pasv_min: 1024,
     pasv_max: 1048,
     greeting: ['Welcome to Photo Distributor'],
+    tls,
+  })
+
+  // Rate limiter for failed login attempts
+  const loginRateLimiter = new LoginRateLimiter({
+    maxAttempts: config.loginMaxAttempts,
+    windowMs: config.loginWindowMs,
   })
 
   ftpServer.on(
     'login',
     async ({ connection, username, password }, resolve, reject) => {
+      const clientIp = connection.ip
       try {
-        console.log(`Login attempt: ${username}`)
+        // Check rate limit before processing login
+        if (loginRateLimiter.isBlocked(clientIp)) {
+          console.log(
+            `🚫 Rate limited: ${clientIp} (too many failed attempts)`,
+          )
+          const error = new Error('Too many failed login attempts. Try again later.')
+          error.code = 421
+          error.name = 'GeneralError'
+          return reject(error)
+        }
+
+        console.log(`Login attempt: ${username} from ${clientIp}`)
 
         // Reload settings to get latest credentials (allows live updates)
         await settings.reload()
@@ -111,6 +135,7 @@ async function startServer() {
 
         if (username === settings.ftpUsername && passwordMatches) {
           console.log(`✅ User ${username} authenticated successfully`)
+          loginRateLimiter.recordSuccess(clientIp)
           resolve({
             fs: new VirtualFileSystem(connection, {
               SUPPORTED_EXTENSIONS,
@@ -118,6 +143,7 @@ async function startServer() {
           })
         } else {
           console.log(`❌ Authentication failed for user ${username}`)
+          loginRateLimiter.recordFailure(clientIp)
           const error = new Error('Invalid username or password')
           error.code = 401
           error.name = 'GeneralError'
@@ -127,6 +153,7 @@ async function startServer() {
         console.error(
           `❌ Error during login for user ${username}: ${error.message}`,
         )
+        loginRateLimiter.recordFailure(clientIp)
         const err = new Error('Authentication error')
         err.code = 500
         err.name = 'GeneralError'
@@ -143,10 +170,17 @@ async function startServer() {
   try {
     await ftpServer.listen()
     console.log(`\n📷 Photo Distributor started!`)
-    console.log(`   FTP URL: ftp://${config.ftpHost}:${config.ftpPort}`)
+    console.log(
+      `   FTP URL: ftp://${config.ftpHost}:${config.ftpPort}${tls ? ' (TLS enabled)' : ''}`,
+    )
     console.log(`\n   Supported formats:`)
     console.log(`   - Photos: ${PHOTO_EXTENSIONS.join(', ')}`)
     console.log(`   - Videos: ${VIDEO_EXTENSIONS.join(', ')}`)
+    console.log(`\n   Security:`)
+    console.log(`   - FTPS (AUTH TLS): ${tls ? 'enabled' : 'disabled'}`)
+    console.log(
+      `   - Login rate limit: ${config.loginMaxAttempts} attempts per ${config.loginWindowMs / 60000} min`,
+    )
 
     // Start web dashboard
     await startWebServer()
@@ -165,6 +199,7 @@ async function startServer() {
   // Handle graceful shutdown
   const shutdown = async () => {
     console.log('\n🛑 Shutting down...')
+    loginRateLimiter.close()
     await destinationManager.cleanup()
     await saveDatabase()
     await closeDatabase()

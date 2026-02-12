@@ -111,6 +111,11 @@ Edit `.env` and update the variables for your setup. Here are the available opti
 | `FTP_PORT`     | `2121`                  | FTP server port. Use 2121+ to avoid requiring root privileges                                                                            |
 | `FTP_HOST`     | `0.0.0.0`               | Host address to bind to. Use `0.0.0.0` for all interfaces or a specific IP                                                               |
 | `PASV_URL`     | `0.0.0.0`               | **IMPORTANT**: Public IP or hostname for passive mode connections. Set this to your server's IP address that FTP clients will connect to |
+| `FTP_TLS`      | `true`                  | Enable/disable TLS for FTPS. Set to `false` to disable (not recommended)                                                                |
+| `FTP_TLS_CERT` |                         | Path to a custom TLS certificate file. If not set, a self-signed certificate is auto-generated                                           |
+| `FTP_TLS_KEY`  |                         | Path to a custom TLS private key file. Must be provided together with `FTP_TLS_CERT`                                                    |
+| `FTP_LOGIN_MAX_ATTEMPTS` | `5`           | Maximum failed login attempts before temporarily blocking an IP                                                                          |
+| `FTP_LOGIN_WINDOW_MS`    | `900000`      | Rate limit window in milliseconds (default: 15 minutes)                                                                                  |
 | `WEB_PORT`     | `3001`                  | Port for the web dashboard                                                                                                               |
 | `WEB_BASE_URL` | `http://localhost:3001` | Base URL for the web dashboard, used for Google OAuth redirect URIs                                                                      |
 | `DATA_DIR`     | `./data`                | Base directory for config, logs, and temp files. Subdirectories: `config/`, `logs/`, `temp/`                                             |
@@ -165,16 +170,16 @@ FTP_HOST=0.0.0.0 PASV_URL=<your-local-ip> npm start
 
 ## Security
 
-This application is designed for use on trusted, private networks only.
+This application includes several security features to protect against unauthorized access:
 
-**DO NOT** expose either FTP or the web dashboard to the internet.
+- **FTPS (Explicit TLS)**: TLS encryption is enabled by default using an auto-generated self-signed certificate. Clients connect via `AUTH TLS` for encrypted data and command channels. You can provide your own certificate via `FTP_TLS_CERT` and `FTP_TLS_KEY` environment variables.
+- **Authentication Rate Limiting**: Failed login attempts are tracked per IP address. After 5 failed attempts (configurable via `FTP_LOGIN_MAX_ATTEMPTS`), the IP is temporarily blocked for 15 minutes (configurable via `FTP_LOGIN_WINDOW_MS`).
+- **Bcrypt Password Hashing**: FTP passwords are stored using bcrypt hashing with salt rounds.
 
 **Key security considerations:**
 
 - Web dashboard has no authentication
-- FTP protocol is unencrypted
-- FTP authentication is not rate limited
-- Not suitable for public internet exposure
+- Set `FTP_TLS=false` to disable TLS if needed (not recommended for public access)
 
 ## License
 

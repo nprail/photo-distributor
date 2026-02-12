@@ -178,7 +178,7 @@ This application includes several security features to protect against unauthori
 
 **Key security considerations:**
 
-- Web dashboard has no authentication
+- Web dashboard has no authentication — do **not** expose the web dashboard (port 3001) to the public internet without additional protection (e.g., a reverse proxy with authentication, VPN, or firewall rules)
 - Set `FTP_TLS=false` to disable TLS if needed (not recommended for public access)
 
 ## License

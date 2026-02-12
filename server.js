@@ -153,7 +153,6 @@ async function startServer() {
         console.error(
           `❌ Error during login for user ${username}: ${error.message}`,
         )
-        loginRateLimiter.recordFailure(clientIp)
         const err = new Error('Authentication error')
         err.code = 500
         err.name = 'GeneralError'

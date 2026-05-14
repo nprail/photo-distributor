@@ -89,6 +89,81 @@ npm start
 DATA_DIR=/path/to/data npm start
 ```
 
+### CLI — Uploading from an SD Card
+
+`pd-upload` is a command-line tool bundled with photo-distributor that lets you quickly upload photos and videos from an SD card (or any folder) to a running photo-distributor server.
+
+#### Installation
+
+Install the package globally to make `pd-upload` available anywhere:
+
+```bash
+npm install -g .
+```
+
+Or run it directly without installing:
+
+```bash
+node cli/index.js [command] [options]
+```
+
+#### Quick Start
+
+```bash
+# Auto-detect connected SD cards and prompt to upload
+pd-upload
+
+# Upload from a specific path
+pd-upload /Volumes/CANON/DCIM
+
+# Show what would be uploaded (no actual upload)
+pd-upload --dry-run /Volumes/CANON/DCIM
+```
+
+#### Commands
+
+| Command | Description |
+|---------|-------------|
+| `pd-upload [source]` | Upload from `[source]` path, or auto-detect an SD card if omitted |
+| `pd-upload detect` | List detected SD cards / camera storage volumes and exit |
+| `pd-upload config` | View or save default connection settings |
+
+#### Connection Options
+
+These flags apply to `pd-upload` (upload) and `pd-upload config`.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--host <host>` | `localhost` | FTP server hostname or IP address |
+| `--port <port>` | `2121` | FTP server port |
+| `--user <user>` | `pd` | FTP username |
+| `--password <pass>` | _(prompted)_ | FTP password |
+| `--dry-run` | — | List files that would be uploaded without uploading |
+
+#### Saving Default Connection Settings
+
+If you always upload to the same server, save the settings once:
+
+```bash
+pd-upload config --host 192.168.1.50 --password mysecret
+```
+
+From then on, `pd-upload` uses those defaults — no flags required.
+
+Settings are stored in `~/.photo-distributor.json`.
+
+#### SD Card Detection
+
+`pd-upload` looks for volumes that contain a `DCIM` folder, which is the standard structure used by digital cameras and phones.
+
+Supported platforms and mount paths:
+
+| Platform | Paths searched |
+|----------|---------------|
+| macOS | `/Volumes/*` |
+| Linux | `/media/<user>/*`, `/media/*`, `/run/media/*`, `/mnt/*` |
+| Windows | Drive letters `A:\` – `Z:\` |
+
 ## Configuration
 
 The server uses two types of configuration:

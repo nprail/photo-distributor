@@ -11,7 +11,7 @@ const CONFIG_FILE = path.join(os.homedir(), '.photo-distributor.json')
 
 const DEFAULTS = {
   host: 'localhost',
-  port: 2121,
+  port: 3001,
   user: 'pd',
   password: null,
 }

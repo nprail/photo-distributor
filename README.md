@@ -134,10 +134,10 @@ These flags apply to `pd-upload` (upload) and `pd-upload config`.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--host <host>` | `localhost` | FTP server hostname or IP address |
-| `--port <port>` | `2121` | FTP server port |
-| `--user <user>` | `pd` | FTP username |
-| `--password <pass>` | _(prompted)_ | FTP password |
+| `--host <host>` | `localhost` | Server hostname or IP address |
+| `--port <port>` | `3001` | Server port (web dashboard port) |
+| `--user <user>` | `pd` | Username |
+| `--password <pass>` | _(prompted)_ | Password |
 | `--dry-run` | — | List files that would be uploaded without uploading |
 
 #### Saving Default Connection Settings

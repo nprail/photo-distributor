@@ -3,19 +3,19 @@
  * pd-upload — Photo Distributor CLI
  *
  * Upload photos and videos from a local path (or an auto-detected SD card)
- * to a running photo-distributor server via FTP.
+ * to a running photo-distributor server.
  *
  * Usage:
  *   pd-upload                          # auto-detect SD card and upload
  *   pd-upload /path/to/photos          # upload from a specific path
  *   pd-upload detect                   # list detected SD cards and exit
- *   pd-upload config                   # save default connection settings
+ *   pd-upload config                   # view / save default connection settings
  *
  * Connection flags (override saved config):
- *   --host <host>         FTP host      (default: localhost)
- *   --port <port>         FTP port      (default: 2121)
- *   --user <user>         FTP username  (default: pd)
- *   --password <pass>     FTP password
+ *   --host <host>         Server host     (default: localhost)
+ *   --port <port>         Server port     (default: 3001)
+ *   --user <user>         Username        (default: pd)
+ *   --password <pass>     Password
  *   --dry-run             Show what would be uploaded, but don't upload
  */
 
@@ -27,7 +27,7 @@ import readline from 'readline'
 
 import { loadConfig, saveConfig } from './config.js'
 import { detectSdCards, findMediaFiles } from './detect-cards.js'
-import { uploadFiles, SUPPORTED_EXTENSIONS } from './uploader.js'
+import { getUploadToken, uploadFiles, SUPPORTED_EXTENSIONS } from './uploader.js'
 
 // Resolve package version from package.json
 const require = createRequire(import.meta.url)
@@ -36,13 +36,6 @@ const pkg = require(
 )
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-
-function formatBytes(bytes) {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`
-  return `${(bytes / 1024 ** 3).toFixed(2)} GB`
-}
 
 /**
  * Merge CLI flags on top of the saved config, using only the flags that were
@@ -112,18 +105,26 @@ async function runUpload(sourcePath, conn, dryRun) {
 
   if (!conn.password) {
     conn.password = await prompt(
-      `🔑 FTP password for ${conn.user}@${conn.host}:${conn.port}: `,
+      `🔑 Password for ${conn.user}@${conn.host}:${conn.port}: `,
     )
   }
 
-  console.log(
-    `\n📡 Connecting to ftp://${conn.user}@${conn.host}:${conn.port} …`,
-  )
+  const baseUrl = `http://${conn.host}:${conn.port}`
+  console.log(`\n📡 Connecting to ${baseUrl} …`)
+
+  let token
+  try {
+    token = await getUploadToken({ baseUrl, user: conn.user, password: conn.password })
+  } catch (err) {
+    console.error(`❌ ${err.message}`)
+    process.exit(1)
+  }
 
   let lastLine = ''
 
   const stats = await uploadFiles({
-    ...conn,
+    baseUrl,
+    token,
     files,
     onProgress(current, total, filePath, status, errMsg) {
       const filename = path.basename(filePath)
@@ -144,14 +145,12 @@ async function runUpload(sourcePath, conn, dryRun) {
       process.stdout.write(line)
       lastLine = line
 
-      if (status === 'done' || status === 'error' || status === 'skipped') {
-        if (status === 'error') {
-          process.stdout.write(`\n     ⚠️  ${errMsg}\n`)
-          lastLine = ''
-        } else if (current === total) {
-          process.stdout.write('\n')
-          lastLine = ''
-        }
+      if (status === 'error') {
+        process.stdout.write(`\n     ⚠️  ${errMsg}\n`)
+        lastLine = ''
+      } else if (current === total) {
+        process.stdout.write('\n')
+        lastLine = ''
       }
     },
   })
@@ -171,17 +170,17 @@ program
   )
   .version(pkg.version)
 
-// Shared connection flags added to all (sub)commands
+// Shared connection flags added to relevant (sub)commands
 function addConnectionOptions(cmd) {
   return cmd
-    .option('--host <host>', 'FTP host')
-    .option('--port <port>', 'FTP port', (v) => parseInt(v, 10))
-    .option('--user <user>', 'FTP username')
-    .option('--password <password>', 'FTP password')
+    .option('--host <host>', 'Server host')
+    .option('--port <port>', 'Server port', (v) => parseInt(v, 10))
+    .option('--user <user>', 'Username')
+    .option('--password <password>', 'Password')
     .option('--dry-run', 'Show what would be uploaded without uploading')
 }
 
-// ── detect ──────────────────────────────────────────────────────────────────
+// ── detect ───────────────────────────────────────────────────────────────────
 program
   .command('detect')
   .description('Detect connected SD cards / camera storage and list them.')
@@ -203,12 +202,12 @@ program
     }
   })
 
-// ── config ───────────────────────────────────────────────────────────────────
+// ── config ────────────────────────────────────────────────────────────────────
 addConnectionOptions(
   program
     .command('config')
     .description(
-      'Save default connection settings to ~/.photo-distributor.json.',
+      'View or save default connection settings (~/.photo-distributor.json).',
     ),
 ).action(async (opts) => {
   const saved = await loadConfig()
@@ -239,7 +238,7 @@ addConnectionOptions(
   console.log(`   password : ${next.password ? '(set)' : '(not set)'}`)
 })
 
-// ── upload (default command) ─────────────────────────────────────────────────
+// ── upload (default command) ──────────────────────────────────────────────────
 addConnectionOptions(
   program
     .command('upload [source]', { isDefault: true })

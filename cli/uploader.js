@@ -1,10 +1,10 @@
 /**
- * FTP uploader.
- * Connects to a photo-distributor FTP server and uploads a list of files.
+ * HTTP uploader for photo-distributor.
+ * Uses the purpose-built upload API (POST /api/upload).
  */
 
 import path from 'path'
-import { Client } from 'basic-ftp'
+import { openAsBlob } from 'fs'
 
 /** Extensions supported by photo-distributor (must match server). */
 export const SUPPORTED_EXTENSIONS = [
@@ -30,25 +30,54 @@ export const SUPPORTED_EXTENSIONS = [
 ]
 
 /**
- * Upload a list of files to photo-distributor via FTP.
+ * Exchange credentials for a short-lived upload session token.
+ * Avoids re-running bcrypt on every individual file upload.
  *
  * @param {object} options
- * @param {string}   options.host
- * @param {number}   options.port
- * @param {string}   options.user
- * @param {string}   options.password
- * @param {string[]} options.files       - Absolute paths to files to upload
- * @param {boolean}  [options.dryRun]    - If true, skip actual upload
- * @param {function} [options.onProgress] - Called with (current, total, filePath, status)
- *   status is 'uploading' | 'done' | 'error' | 'skipped'
+ * @param {string} options.baseUrl   - e.g. "http://192.168.1.50:3001"
+ * @param {string} options.user
+ * @param {string} options.password
+ * @returns {Promise<string>} bearer token
+ */
+export async function getUploadToken({ baseUrl, user, password }) {
+  let res
+  try {
+    res = await fetch(`${baseUrl}/api/upload/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: user, password }),
+    })
+  } catch (err) {
+    throw new Error(
+      `Cannot reach server at ${baseUrl} — is photo-distributor running? (${err.message})`,
+    )
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.error || `Authentication failed (HTTP ${res.status})`)
+  }
+
+  const { token } = await res.json()
+  return token
+}
+
+/**
+ * Upload a list of files to photo-distributor via the HTTP API.
+ *
+ * @param {object}   options
+ * @param {string}   options.baseUrl      - e.g. "http://192.168.1.50:3001"
+ * @param {string}   options.token        - Bearer token from getUploadToken()
+ * @param {string[]} options.files        - Absolute file paths to upload
+ * @param {boolean}  [options.dryRun]     - List files without uploading
+ * @param {function} [options.onProgress] - Called with (current, total, filePath, status, errMsg?)
+ *   status: 'uploading' | 'done' | 'error' | 'skipped'
  *
  * @returns {Promise<{uploaded: number, skipped: number, failed: number}>}
  */
 export async function uploadFiles({
-  host,
-  port,
-  user,
-  password,
+  baseUrl,
+  token,
   files,
   dryRun = false,
   onProgress,
@@ -59,12 +88,9 @@ export async function uploadFiles({
   const supported = files.filter((f) =>
     SUPPORTED_EXTENSIONS.includes(path.extname(f).toLowerCase()),
   )
-  const unsupportedCount = files.length - supported.length
-  stats.skipped += unsupportedCount
+  stats.skipped += files.length - supported.length
 
-  if (supported.length === 0) {
-    return stats
-  }
+  if (supported.length === 0) return stats
 
   if (dryRun) {
     for (let i = 0; i < supported.length; i++) {
@@ -74,35 +100,34 @@ export async function uploadFiles({
     return stats
   }
 
-  const client = new Client()
-  client.ftp.verbose = false
+  for (let i = 0; i < supported.length; i++) {
+    const filePath = supported[i]
+    const filename = path.basename(filePath)
 
-  try {
-    await client.access({
-      host,
-      port,
-      user,
-      password,
-      secure: false,
-    })
+    onProgress?.(i + 1, supported.length, filePath, 'uploading')
 
-    for (let i = 0; i < supported.length; i++) {
-      const filePath = supported[i]
-      const filename = path.basename(filePath)
+    try {
+      const blob = await openAsBlob(filePath)
+      const form = new FormData()
+      form.append('file', blob, filename)
 
-      onProgress?.(i + 1, supported.length, filePath, 'uploading')
+      const res = await fetch(`${baseUrl}/api/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: form,
+      })
 
-      try {
-        await client.uploadFrom(filePath, `/${filename}`)
-        stats.uploaded++
-        onProgress?.(i + 1, supported.length, filePath, 'done')
-      } catch (err) {
-        stats.failed++
-        onProgress?.(i + 1, supported.length, filePath, 'error', err.message)
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        throw new Error(body.error || `Server error (HTTP ${res.status})`)
       }
+
+      stats.uploaded++
+      onProgress?.(i + 1, supported.length, filePath, 'done')
+    } catch (err) {
+      stats.failed++
+      onProgress?.(i + 1, supported.length, filePath, 'error', err.message)
     }
-  } finally {
-    client.close()
   }
 
   return stats

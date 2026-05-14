@@ -45,7 +45,7 @@ const pkg = require(
 function resolveConnection(opts, saved) {
   return {
     host: opts.host ?? saved.host,
-    port: opts.port != null ? Number(opts.port) : saved.port,
+    port: opts.port ?? saved.port,
     user: opts.user ?? saved.user,
     password: opts.password ?? saved.password,
   }

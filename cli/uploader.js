@@ -122,8 +122,14 @@ export async function uploadFiles({
         throw new Error(body.error || `Server error (HTTP ${res.status})`)
       }
 
-      stats.uploaded++
-      onProgress?.(i + 1, supported.length, filePath, 'done')
+      const body = await res.json().catch(() => ({}))
+      if (body.duplicate) {
+        stats.skipped++
+        onProgress?.(i + 1, supported.length, filePath, 'skipped')
+      } else {
+        stats.uploaded++
+        onProgress?.(i + 1, supported.length, filePath, 'done')
+      }
     } catch (err) {
       stats.failed++
       onProgress?.(i + 1, supported.length, filePath, 'error', err.message)

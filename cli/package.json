@@ -1,6 +1,6 @@
 {
   "name": "photo-distributor-cli",
-  "version": "1.0.0",
+  "version": "0.0.2",
   "description": "CLI for uploading photos and videos to a photo-distributor server.",
   "type": "module",
   "bin": {

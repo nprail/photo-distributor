@@ -19,7 +19,8 @@ WORKDIR /app
 
 # Install runtime dependencies
 # perl is required for exiftool
-RUN apk add --no-cache perl
+# openssl is required for auto-generating TLS certificates
+RUN apk add --no-cache perl openssl
 
 # Copy node_modules from builder
 COPY --from=builder /app/node_modules ./node_modules

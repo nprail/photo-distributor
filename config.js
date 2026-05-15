@@ -10,6 +10,35 @@ const configDir = path.join(dataDir, 'config')
 // Docker environment detection
 const isDocker = process.env.DOCKER_ENV === 'true'
 
+function parseTrustProxy(value) {
+  if (value == null || value.trim() === '') {
+    return false
+  }
+
+  const normalized = value.trim().toLowerCase()
+
+  if (normalized === 'true') {
+    return true
+  }
+
+  if (normalized === 'false') {
+    return false
+  }
+
+  if (/^\d+$/.test(normalized)) {
+    return parseInt(normalized, 10)
+  }
+
+  if (value.includes(',')) {
+    return value
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+  }
+
+  return value.trim()
+}
+
 const config = {
   // Docker environment flag
   isDocker,
@@ -22,6 +51,7 @@ const config = {
   // Web Dashboard Settings
   webPort: parseInt(process.env.WEB_PORT, 10) || 3001,
   webBaseUrl: process.env.WEB_BASE_URL || 'http://localhost:3001',
+  trustProxy: parseTrustProxy(process.env.TRUST_PROXY),
 
   // Directory Settings
   dataDir,

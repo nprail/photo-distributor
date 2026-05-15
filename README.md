@@ -187,6 +187,7 @@ Edit `.env` and update the variables for your setup. Here are the available opti
 | `PASV_URL`     | `0.0.0.0`               | **IMPORTANT**: Public IP or hostname for passive mode connections. Set this to your server's IP address that FTP clients will connect to |
 | `WEB_PORT`     | `3001`                  | Port for the web dashboard                                                                                                               |
 | `WEB_BASE_URL` | `http://localhost:3001` | Base URL for the web dashboard, used for Google OAuth redirect URIs                                                                      |
+| `TRUST_PROXY`  | `false`                 | Express `trust proxy` value used to resolve client IPs for rate limiting. Set this when running behind a reverse proxy                  |
 | `DATA_DIR`     | `./data`                | Base directory for config, logs, and temp files. Subdirectories: `config/`, `logs/`, `temp/`                                             |
 | `NODE_ENV`     | `production`            | Node.js environment mode                                                                                                                 |
 
@@ -194,6 +195,11 @@ Edit `.env` and update the variables for your setup. Here are the available opti
 
 - `.env` is **not** committed to git (see `.gitignore`) - keep your local configuration private
 - `.env.example` shows example values and should be committed to version control
+- `TRUST_PROXY` should match your network topology:
+  - `false`: direct connections only (no reverse proxy)
+  - `1` (or higher): trust that many proxy hops (typical single proxy setup uses `1`)
+  - `loopback`, `linklocal`, `uniquelocal`, CIDR, IP, or comma-separated list: trust only those proxies
+  - Avoid setting `true` on publicly reachable servers unless all incoming traffic is guaranteed to pass through trusted proxies
 
 ## Destinations
 

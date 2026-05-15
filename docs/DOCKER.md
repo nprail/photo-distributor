@@ -46,6 +46,7 @@ This guide explains how to deploy Photo Distributor using Docker, with specific 
    FTP_HOST=0.0.0.0
    PASV_URL=192.168.1.100    # Change to your NAS/server IP
    WEB_PORT=3001
+   TRUST_PROXY=false
    PHOTOS_DIR=./photos
    ```
 
@@ -74,6 +75,7 @@ docker run -d \
   -e FTP_HOST=0.0.0.0 \
   -e PASV_URL=192.168.1.100 \
   -e WEB_PORT=3001 \
+   -e TRUST_PROXY=false \
   -v $(pwd)/data:/app/data \
   -v $(pwd)/photos:/data/photos \
   photo-distributor
@@ -114,6 +116,7 @@ The easiest way to configure the application is using a `.env` file:
 
 3. Key variables to update:
    - `PASV_URL`: Set to your NAS/server IP address (most important for FTP to work)
+   - `TRUST_PROXY`: Keep `false` unless you run behind a reverse proxy. If proxied, set to `1` (single proxy) or trusted proxy CIDRs/IPs
    - `PHOTOS_DIR`: Set to where photos should be stored (relative path or absolute)
    - Other variables can use defaults
 

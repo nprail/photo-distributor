@@ -21,18 +21,19 @@
 import { program } from 'commander'
 import { createRequire } from 'module'
 import path from 'path'
-import { fileURLToPath } from 'url'
 import readline from 'readline'
 
 import { loadConfig, saveConfig } from './config.js'
 import { detectSdCards, findMediaFiles } from './detect-cards.js'
-import { getUploadToken, uploadFiles, SUPPORTED_EXTENSIONS } from './uploader.js'
+import {
+  getSupportedExtensions,
+  getUploadToken,
+  uploadFiles,
+} from './uploader.js'
 
 // Resolve package version from package.json
 const require = createRequire(import.meta.url)
-const pkg = require(
-  path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'package.json'),
-)
+const pkg = require('./package.json')
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -81,9 +82,31 @@ function progressBar(current, total, width = 30) {
  * Run the full upload flow from a source directory.
  */
 async function runUpload(sourcePath, conn, dryRun) {
+  // Validate URL before use
+  let baseUrl
+  try {
+    const parsed = new URL(conn.url)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('URL must use http or https')
+    }
+    // Use only the origin so query strings / paths in the value are ignored
+    baseUrl = parsed.origin
+  } catch (err) {
+    console.error(`❌ Invalid server URL "${conn.url}": ${err.message}`)
+    process.exit(1)
+  }
+
+  let supportedExtensions
+  try {
+    supportedExtensions = await getSupportedExtensions({ baseUrl })
+  } catch (err) {
+    console.error(`❌ ${err.message}`)
+    process.exit(1)
+  }
+
   console.log(`\n🔍 Scanning ${sourcePath} …`)
 
-  const files = await findMediaFiles(sourcePath, SUPPORTED_EXTENSIONS)
+  const files = await findMediaFiles(sourcePath, supportedExtensions)
 
   if (files.length === 0) {
     console.log('   No supported media files found.')
@@ -107,24 +130,15 @@ async function runUpload(sourcePath, conn, dryRun) {
     )
   }
 
-  // Validate URL before use
-  let baseUrl
-  try {
-    const parsed = new URL(conn.url)
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-      throw new Error('URL must use http or https')
-    }
-    // Use only the origin so query strings / paths in the value are ignored
-    baseUrl = parsed.origin
-  } catch (err) {
-    console.error(`❌ Invalid server URL "${conn.url}": ${err.message}`)
-    process.exit(1)
-  }
   console.log(`\n📡 Connecting to ${baseUrl} …`)
 
   let token
   try {
-    token = await getUploadToken({ baseUrl, user: conn.user, password: conn.password })
+    token = await getUploadToken({
+      baseUrl,
+      user: conn.user,
+      password: conn.password,
+    })
   } catch (err) {
     console.error(`❌ ${err.message}`)
     process.exit(1)
@@ -136,6 +150,7 @@ async function runUpload(sourcePath, conn, dryRun) {
     baseUrl,
     token,
     files,
+    supportedExtensions,
     onProgress(current, total, filePath, status, errMsg) {
       const filename = path.basename(filePath)
       const bar = progressBar(current, total)
@@ -151,7 +166,8 @@ async function runUpload(sourcePath, conn, dryRun) {
       const line = `  ${icon} ${bar}  ${filename}`
 
       // Clear previous line and overwrite
-      if (lastLine) process.stdout.write('\r' + ' '.repeat(lastLine.length) + '\r')
+      if (lastLine)
+        process.stdout.write('\r' + ' '.repeat(lastLine.length) + '\r')
       process.stdout.write(line)
       lastLine = line
 
@@ -183,7 +199,10 @@ program
 // Shared connection flags added to relevant (sub)commands
 function addConnectionOptions(cmd) {
   return cmd
-    .option('--url <url>', 'Server URL (http/https, e.g. http://192.168.1.50:3001)')
+    .option(
+      '--url <url>',
+      'Server URL (http/https, e.g. http://192.168.1.50:3001)',
+    )
     .option('--user <user>', 'Username')
     .option('--password <password>', 'Password')
     .option('--dry-run', 'Show what would be uploaded without uploading')

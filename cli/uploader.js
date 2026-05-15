@@ -6,28 +6,38 @@
 import path from 'path'
 import { openAsBlob } from 'fs'
 
-/** Extensions supported by photo-distributor (must match server). */
-export const SUPPORTED_EXTENSIONS = [
-  // Photos
-  '.jpg',
-  '.jpeg',
-  '.png',
-  '.heic',
-  '.heif',
-  '.webp',
-  '.tiff',
-  '.tif',
-  '.cr2',
-  '.cr3',
-  // Videos
-  '.mp4',
-  '.mov',
-  '.avi',
-  '.mkv',
-  '.m4v',
-  '.3gp',
-  '.wmv',
-]
+/**
+ * Get supported upload extensions from the server.
+ *
+ * @param {object} options
+ * @param {string} options.baseUrl - e.g. "http://192.168.1.50:3001"
+ * @returns {Promise<string[]>}
+ */
+export async function getSupportedExtensions({ baseUrl }) {
+  let res
+  try {
+    res = await fetch(`${baseUrl}/api/upload/supported-extensions`)
+  } catch (err) {
+    throw new Error(
+      `Cannot reach server at ${baseUrl} — is photo-distributor running? (${err.message})`,
+    )
+  }
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(
+      body.error || `Failed to load supported extensions (HTTP ${res.status})`,
+    )
+  }
+
+  const body = await res.json().catch(() => ({}))
+  const extensions = Array.isArray(body.extensions) ? body.extensions : null
+  if (!extensions || extensions.length === 0) {
+    throw new Error('Server returned no supported extensions')
+  }
+
+  return extensions.map((ext) => String(ext).toLowerCase())
+}
 
 /**
  * Exchange credentials for a short-lived upload session token.
@@ -79,6 +89,7 @@ export async function uploadFiles({
   baseUrl,
   token,
   files,
+  supportedExtensions,
   dryRun = false,
   onProgress,
 }) {
@@ -86,7 +97,7 @@ export async function uploadFiles({
 
   // Filter to supported extensions
   const supported = files.filter((f) =>
-    SUPPORTED_EXTENSIONS.includes(path.extname(f).toLowerCase()),
+    supportedExtensions.includes(path.extname(f).toLowerCase()),
   )
   stats.skipped += files.length - supported.length
 
@@ -117,12 +128,24 @@ export async function uploadFiles({
         body: form,
       })
 
+      const body = await res.json().catch(() => ({}))
+
       if (!res.ok) {
-        const body = await res.json().catch(() => ({}))
+        if (res.status === 415) {
+          throw new Error(
+            body.error ||
+              `Unsupported file type rejected by server (HTTP ${res.status})`,
+          )
+        }
         throw new Error(body.error || `Server error (HTTP ${res.status})`)
       }
 
-      const body = await res.json().catch(() => ({}))
+      // Defensive handling: if server returns a JSON failure payload with 2xx,
+      // surface it instead of treating the upload as successful.
+      if (body.success === false) {
+        throw new Error(body.error || 'Upload was rejected by server')
+      }
+
       if (body.duplicate) {
         stats.skipped++
         onProgress?.(i + 1, supported.length, filePath, 'skipped')

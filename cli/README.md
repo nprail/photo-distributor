@@ -10,6 +10,10 @@
 
 Command-line uploader for sending photos and videos from an SD card (or any folder) to a running [photo-distributor](https://github.com/nprail/photo-distributor) server.
 
+## Requirements
+
+- Node.js 20.0.0 or later
+
 ## What it does
 
 - Auto-detects mounted camera/SD card volumes by looking for a `DCIM` directory

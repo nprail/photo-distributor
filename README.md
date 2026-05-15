@@ -89,6 +89,80 @@ npm start
 DATA_DIR=/path/to/data npm start
 ```
 
+### CLI — Uploading from an SD Card
+
+`pd-upload` is a command-line tool bundled with photo-distributor that lets you quickly upload photos and videos from an SD card (or any folder) to a running photo-distributor server.
+
+#### Installation
+
+Install the CLI globally from npm:
+
+```bash
+npm install -g photo-distributor-cli
+```
+
+Or run it directly without installing:
+
+```bash
+node cli/index.js [command] [options]
+```
+
+#### Quick Start
+
+```bash
+# Auto-detect connected SD cards and prompt to upload
+pd-upload
+
+# Upload from a specific path
+pd-upload /Volumes/CANON/DCIM
+
+# Show what would be uploaded (no actual upload)
+pd-upload --dry-run /Volumes/CANON/DCIM
+```
+
+#### Commands
+
+| Command | Description |
+|---------|-------------|
+| `pd-upload [source]` | Upload from `[source]` path, or auto-detect an SD card if omitted |
+| `pd-upload detect` | List detected SD cards / camera storage volumes and exit |
+| `pd-upload config` | View or save default connection settings |
+
+#### Connection Options
+
+These flags apply to `pd-upload` (upload) and `pd-upload config`.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--url <url>` | `http://localhost:3001` | Server URL (http/https) |
+| `--user <user>` | `pd` | Username |
+| `--password <pass>` | _(prompted)_ | Password |
+| `--dry-run` | — | List files that would be uploaded without uploading |
+
+#### Saving Default Connection Settings
+
+If you always upload to the same server, save the settings once:
+
+```bash
+pd-upload config --url http://192.168.1.50:3001 --password mysecret
+```
+
+From then on, `pd-upload` uses those defaults — no flags required.
+
+Settings are stored in `~/.photo-distributor.json`.
+
+#### SD Card Detection
+
+`pd-upload` looks for volumes that contain a `DCIM` folder, which is the standard structure used by digital cameras and phones.
+
+Supported platforms and mount paths:
+
+| Platform | Paths searched |
+|----------|---------------|
+| macOS | `/Volumes/*` |
+| Linux | `/media/<user>/*`, `/media/*`, `/run/media/*`, `/mnt/*` |
+| Windows | Drive letters `A:\` – `Z:\` |
+
 ## Configuration
 
 The server uses two types of configuration:
@@ -113,6 +187,7 @@ Edit `.env` and update the variables for your setup. Here are the available opti
 | `PASV_URL`     | `0.0.0.0`               | **IMPORTANT**: Public IP or hostname for passive mode connections. Set this to your server's IP address that FTP clients will connect to |
 | `WEB_PORT`     | `3001`                  | Port for the web dashboard                                                                                                               |
 | `WEB_BASE_URL` | `http://localhost:3001` | Base URL for the web dashboard, used for Google OAuth redirect URIs                                                                      |
+| `TRUST_PROXY`  | `false`                 | Express `trust proxy` value used to resolve client IPs for rate limiting. Set this when running behind a reverse proxy                  |
 | `DATA_DIR`     | `./data`                | Base directory for config, logs, and temp files. Subdirectories: `config/`, `logs/`, `temp/`                                             |
 | `NODE_ENV`     | `production`            | Node.js environment mode                                                                                                                 |
 
@@ -120,6 +195,11 @@ Edit `.env` and update the variables for your setup. Here are the available opti
 
 - `.env` is **not** committed to git (see `.gitignore`) - keep your local configuration private
 - `.env.example` shows example values and should be committed to version control
+- `TRUST_PROXY` should match your network topology:
+  - `false`: direct connections only (no reverse proxy)
+  - `1` (or higher): trust that many proxy hops (typical single proxy setup uses `1`)
+  - `loopback`, `linklocal`, `uniquelocal`, CIDR, IP, or comma-separated list: trust only those proxies
+  - Avoid setting `true` on publicly reachable servers unless all incoming traffic is guaranteed to pass through trusted proxies
 
 ## Destinations
 

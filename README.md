@@ -95,10 +95,10 @@ DATA_DIR=/path/to/data npm start
 
 #### Installation
 
-Install the CLI globally from GitHub Packages:
+Install the CLI globally from npm:
 
 ```bash
-npm install -g @nprail/photo-distributor
+npm install -g photo-distributor-cli
 ```
 
 Or run it directly without installing:

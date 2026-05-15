@@ -12,8 +12,7 @@
  *   pd-upload config                   # view / save default connection settings
  *
  * Connection flags (override saved config):
- *   --host <host>         Server host     (default: localhost)
- *   --port <port>         Server port     (default: 3001)
+ *   --url <url>           Server URL      (default: http://localhost:3001)
  *   --user <user>         Username        (default: pd)
  *   --password <pass>     Password
  *   --dry-run             Show what would be uploaded, but don't upload
@@ -44,8 +43,7 @@ const pkg = require(
  */
 function resolveConnection(opts, saved) {
   return {
-    host: opts.host ?? saved.host,
-    port: opts.port ?? saved.port,
+    url: opts.url ?? saved.url,
     user: opts.user ?? saved.user,
     password: opts.password ?? saved.password,
   }
@@ -105,11 +103,23 @@ async function runUpload(sourcePath, conn, dryRun) {
 
   if (!conn.password) {
     conn.password = await prompt(
-      `🔑 Password for ${conn.user}@${conn.host}:${conn.port}: `,
+      `🔑 Password for ${conn.user} at ${conn.url}: `,
     )
   }
 
-  const baseUrl = `http://${conn.host}:${conn.port}`
+  // Validate URL before use
+  let baseUrl
+  try {
+    const parsed = new URL(conn.url)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+      throw new Error('URL must use http or https')
+    }
+    // Use only the origin so query strings / paths in the value are ignored
+    baseUrl = parsed.origin
+  } catch (err) {
+    console.error(`❌ Invalid server URL "${conn.url}": ${err.message}`)
+    process.exit(1)
+  }
   console.log(`\n📡 Connecting to ${baseUrl} …`)
 
   let token
@@ -173,8 +183,7 @@ program
 // Shared connection flags added to relevant (sub)commands
 function addConnectionOptions(cmd) {
   return cmd
-    .option('--host <host>', 'Server host')
-    .option('--port <port>', 'Server port', (v) => parseInt(v, 10))
+    .option('--url <url>', 'Server URL (http/https, e.g. http://192.168.1.50:3001)')
     .option('--user <user>', 'Username')
     .option('--password <password>', 'Password')
     .option('--dry-run', 'Show what would be uploaded without uploading')
@@ -213,27 +222,24 @@ addConnectionOptions(
   const saved = await loadConfig()
   const updates = {}
 
-  if (opts.host) updates.host = opts.host
-  if (opts.port) updates.port = opts.port
+  if (opts.url) updates.url = opts.url
   if (opts.user) updates.user = opts.user
   if (opts.password) updates.password = opts.password
 
   if (Object.keys(updates).length === 0) {
     console.log('\n📋 Current saved config:')
-    console.log(`   host     : ${saved.host}`)
-    console.log(`   port     : ${saved.port}`)
+    console.log(`   url      : ${saved.url}`)
     console.log(`   user     : ${saved.user}`)
     console.log(`   password : ${saved.password ? '(set)' : '(not set)'}`)
     console.log(
-      '\nProvide flags to update (e.g. --host 192.168.1.50 --password secret)',
+      '\nProvide flags to update (e.g. --url http://192.168.1.50:3001 --password secret)',
     )
     return
   }
 
   const next = await saveConfig(updates)
   console.log('\n✅ Config saved to ~/.photo-distributor.json')
-  console.log(`   host     : ${next.host}`)
-  console.log(`   port     : ${next.port}`)
+  console.log(`   url      : ${next.url}`)
   console.log(`   user     : ${next.user}`)
   console.log(`   password : ${next.password ? '(set)' : '(not set)'}`)
 })

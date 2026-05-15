@@ -10,8 +10,7 @@ import os from 'os'
 const CONFIG_FILE = path.join(os.homedir(), '.photo-distributor.json')
 
 const DEFAULTS = {
-  host: 'localhost',
-  port: 3001,
+  url: 'http://localhost:3001',
   user: 'pd',
   password: null,
 }

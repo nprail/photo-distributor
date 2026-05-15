@@ -95,10 +95,10 @@ DATA_DIR=/path/to/data npm start
 
 #### Installation
 
-Install the package globally to make `pd-upload` available anywhere:
+Install the CLI globally from GitHub Packages:
 
 ```bash
-npm install -g .
+npm install -g @nprail/photo-distributor
 ```
 
 Or run it directly without installing:
@@ -134,8 +134,7 @@ These flags apply to `pd-upload` (upload) and `pd-upload config`.
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--host <host>` | `localhost` | Server hostname or IP address |
-| `--port <port>` | `3001` | Server port (web dashboard port) |
+| `--url <url>` | `http://localhost:3001` | Server URL (http/https) |
 | `--user <user>` | `pd` | Username |
 | `--password <pass>` | _(prompted)_ | Password |
 | `--dry-run` | — | List files that would be uploaded without uploading |
@@ -145,7 +144,7 @@ These flags apply to `pd-upload` (upload) and `pd-upload config`.
 If you always upload to the same server, save the settings once:
 
 ```bash
-pd-upload config --host 192.168.1.50 --password mysecret
+pd-upload config --url http://192.168.1.50:3001 --password mysecret
 ```
 
 From then on, `pd-upload` uses those defaults — no flags required.

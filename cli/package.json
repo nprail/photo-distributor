@@ -1,0 +1,16 @@
+{
+  "name": "@nprail/photo-distributor",
+  "version": "1.0.0",
+  "description": "CLI for uploading photos and videos to a photo-distributor server.",
+  "type": "module",
+  "bin": {
+    "pd-upload": "./index.js"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "dependencies": {
+    "commander": "^14.0.3"
+  },
+  "license": "UNLICENSED"
+}
